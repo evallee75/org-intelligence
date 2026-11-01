@@ -1,0 +1,212 @@
+<template>
+  <div class="automation">
+    <header class="head">
+      <div class="head-text">
+        <h2 class="page-title">
+          Automation
+          <lightning-helptext
+            content="What runs when records are saved, how objects feed each other, which automations conflict and which flow runs fail. Click a figure to open the matching view."
+          ></lightning-helptext>
+        </h2>
+        <div class="au-sub">
+          <p class="muted">{scanText}</p>
+          <template lwc:if={hasScan}>
+            <c-org-intel-browser-badge
+              help="Automations come from the latest scan, kept in this browser only. Failed flow runs are read live from the org."
+            ></c-org-intel-browser-badge>
+          </template>
+        </div>
+      </div>
+      <div class="head-actions">
+        <template lwc:if={data}>
+          <lightning-button-menu
+            label="Export"
+            icon-name="utility:download"
+            menu-alignment="auto"
+            alternative-text="Export"
+            onselect={handleExport}
+          >
+            <lightning-menu-item
+              value="xlsx"
+              label="Workbook: objects, automations, conflicts (Excel)"
+              prefix-icon-name="doctype:excel"
+            ></lightning-menu-item>
+            <lightning-menu-item
+              value="html"
+              label="Full report with conflicts (HTML)"
+              prefix-icon-name="utility:page"
+            ></lightning-menu-item>
+            <lightning-menu-item
+              value="svg"
+              label="Org map (SVG image)"
+              prefix-icon-name="utility:image"
+            ></lightning-menu-item>
+            <lightning-menu-item
+              value="mermaid"
+              label="Mermaid diagram (.mmd)"
+              prefix-icon-name="utility:hierarchy"
+            ></lightning-menu-item>
+            <lightning-menu-item
+              value="csv"
+              label="Conflicts (CSV)"
+              prefix-icon-name="doctype:csv"
+            ></lightning-menu-item>
+          </lightning-button-menu>
+        </template>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </header>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the automation"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The automation view could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:elseif={hasScan}>
+      <template lwc:if={flowLogicMissing}>
+        <div class="banner" role="status">
+          <lightning-icon
+            icon-name="utility:info"
+            size="x-small"
+            class="banner-icon"
+          ></lightning-icon>
+          <span class="banner-text"
+            >Flow logic not analyzed yet: scan Flows with the Tooling API
+            connected.</span
+          >
+          <div class="au-scan" onclick={handleScanClick}>
+            <c-org-intel-scan-control
+              launch-label="Scan Flows"
+              hide-history
+              onscanfinished={handleRefresh}
+              onnavigate={handleChildNavigate}
+            ></c-org-intel-scan-control>
+          </div>
+        </div>
+      </template>
+
+      <section class="kpis" aria-label="Key figures">
+        <template for:each={kpis} for:item="kpi">
+          <button
+            key={kpi.key}
+            type="button"
+            class={kpi.className}
+            data-target={kpi.target}
+            data-type={kpi.conflictType}
+            aria-label={kpi.ariaLabel}
+            title={kpi.caption}
+            onclick={handleKpi}
+          >
+            <span class="kpi-icon">
+              <lightning-icon
+                icon-name={kpi.icon}
+                size="x-small"
+                variant="inverse"
+              ></lightning-icon>
+            </span>
+            <span class="kpi-body">
+              <span class="kpi-value">{kpi.value}</span>
+              <span class="kpi-label">{kpi.label}</span>
+              <template lwc:if={kpi.hasSplit}>
+                <span class="kpi-split">
+                  <template for:each={kpi.split} for:item="part">
+                    <span key={part.key} class="kpi-part"
+                      ><span class="kpi-dot" style={part.style}></span
+                      >{part.text}</span
+                    >
+                  </template>
+                </span>
+              </template>
+              <template lwc:else>
+                <span class="kpi-caption">{kpi.caption}</span>
+              </template>
+            </span>
+          </button>
+        </template>
+      </section>
+
+      <div class="au-tabs" role="tablist" aria-label="Automation views">
+        <template for:each={tabs} for:item="tab">
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            class={tab.className}
+            data-value={tab.value}
+            aria-selected={tab.selected}
+            tabindex={tab.tabIndex}
+            onclick={handleTab}
+            onkeydown={handleTabKeydown}
+          >
+            <lightning-icon
+              icon-name={tab.icon}
+              size="x-small"
+              class="tab-icon"
+            ></lightning-icon>
+            <span>{tab.label}</span>
+            <template lwc:if={tab.badge}>
+              <span class={tab.badgeClass}>{tab.badge}</span>
+            </template>
+          </button>
+        </template>
+      </div>
+
+      <div class="panel" role="tabpanel">
+        <template lwc:if={isMap}>
+          <c-org-intel-org-map
+            data={data}
+            onselectobject={handleSelectObject}
+          ></c-org-intel-org-map>
+        </template>
+        <template lwc:elseif={isObject}>
+          <c-org-intel-automation-object
+            data={data}
+            object-name={selectedObject}
+            automation-id={selectedAutomationId}
+            onselectobject={handleSelectObject}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-automation-object>
+        </template>
+        <template lwc:else>
+          <c-org-intel-automation-conflicts
+            data={data}
+            initial-type={conflictType}
+            onselectobject={handleSelectObject}
+          ></c-org-intel-automation-conflicts>
+        </template>
+      </div>
+    </template>
+    <template lwc:else>
+      <c-org-intel-empty-state
+        title="No flow inventory yet"
+        message="Run a scan including Flows."
+        icon-name="utility:flow"
+      >
+        <div class="au-scan" onclick={handleScanClick}>
+          <c-org-intel-scan-control
+            launch-label="Run a scan"
+            hide-history
+            onscanfinished={handleRefresh}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-scan-control>
+        </div>
+      </c-org-intel-empty-state>
+    </template>
+  </div>
+</template>

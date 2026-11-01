@@ -1,0 +1,130 @@
+<template>
+  <template lwc:if={hasDiagram}>
+    <div class="diagram-head">
+      <ul class="stats">
+        <template for:each={stats} for:item="stat">
+          <li key={stat.key}>{stat.text}</li>
+        </template>
+      </ul>
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button
+          type="button"
+          title="Zoom out"
+          aria-label="Zoom out"
+          onclick={handleZoomOut}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          class="zoom-value"
+          title="Reset to 100%"
+          aria-label="Reset zoom"
+          onclick={handleZoomReset}
+        >
+          {zoomText}
+        </button>
+        <button
+          type="button"
+          title="Zoom in"
+          aria-label="Zoom in"
+          onclick={handleZoomIn}
+        >
+          +
+        </button>
+        <button type="button" title="Fit to width" onclick={handleFit}>
+          Fit
+        </button>
+      </div>
+    </div>
+    <div class="scroll">
+      <svg
+        class="diagram"
+        viewBox={viewBox}
+        style={svgStyle}
+        role="img"
+        aria-label="Flow diagram"
+      >
+        <template for:each={layout.edges} for:item="edge">
+          <g key={edge.key} class={edge.className}>
+            <path d={edge.path} class="edge-line"></path>
+            <polygon points={edge.head} class="edge-head"></polygon>
+            <template lwc:if={edge.hasLabel}>
+              <text
+                x={edge.labelX}
+                y={edge.labelY}
+                text-anchor="middle"
+                class={edge.labelClass}
+              >
+                {edge.label}
+              </text>
+            </template>
+          </g>
+        </template>
+        <template for:each={layout.nodes} for:item="node">
+          <g key={node.key} class={node.className}>
+            <title>{node.title}</title>
+            <rect
+              x={node.x}
+              y={node.y}
+              width={node.width}
+              height={node.height}
+              rx={node.rx}
+              class="node-card"
+            ></rect>
+            <template lwc:if={node.isDiamond}>
+              <polygon points={node.diamond} class="node-icon"></polygon>
+            </template>
+            <template lwc:if={node.isCircle}>
+              <circle
+                cx={node.iconCx}
+                cy={node.iconCy}
+                r={node.iconR}
+                class="node-icon"
+              ></circle>
+            </template>
+            <template lwc:if={node.isSquare}>
+              <rect
+                x={node.iconX}
+                y={node.iconY}
+                width={node.iconSize}
+                height={node.iconSize}
+                rx="7"
+                class="node-icon"
+              ></rect>
+            </template>
+            <text
+              x={node.iconCx}
+              y={node.glyphY}
+              text-anchor="middle"
+              class="node-glyph"
+            >
+              {node.glyph}
+            </text>
+            <text x={node.labelX} y={node.labelY} class="node-label">
+              {node.label}
+            </text>
+            <text x={node.labelX} y={node.typeY} class="node-type">
+              {node.typeLabel}
+            </text>
+          </g>
+        </template>
+      </svg>
+    </div>
+    <ul class="legend">
+      <li><span class="line"></span>next step</li>
+      <li><span class="line line-back"></span>back to a loop</li>
+      <li><span class="line line-fault"></span>fault path</li>
+      <li><span class="ring"></span>query or write inside a loop</li>
+    </ul>
+  </template>
+  <template lwc:elseif={tooLarge}>
+    <p class="empty">Flow too large: diagram not kept.</p>
+  </template>
+  <template lwc:else>
+    <p class="empty">
+      No diagram: the logic of this flow was not analyzed (scan with the Tooling
+      API).
+    </p>
+  </template>
+</template>

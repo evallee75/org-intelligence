@@ -1,0 +1,143 @@
+/* Mise en page du PDF d'installation (scripts/build-install-pdf.mjs) */
+@page {
+  size: A4;
+  margin: 16mm 15mm 16mm 15mm;
+}
+:root {
+  --brand: #0b5cab;
+  --ink: #1f2937;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --soft: #f3f6fa;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+body {
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  font-size: 10pt;
+  line-height: 1.45;
+  margin: 0;
+}
+.cover {
+  background: var(--brand);
+  color: #fff;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+.cover .kicker {
+  font-size: 9pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.cover .name {
+  font-size: 22pt;
+  font-weight: 700;
+  margin: 2px 0 2px;
+}
+.cover .sub {
+  font-size: 10.5pt;
+  opacity: 0.95;
+}
+h1 {
+  display: none;
+}
+h2 {
+  font-size: 13.5pt;
+  color: var(--brand);
+  margin: 18px 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 2px solid var(--line);
+  break-after: avoid;
+}
+h3 {
+  font-size: 11pt;
+  margin: 12px 0 4px;
+  break-after: avoid;
+}
+p,
+ul,
+ol {
+  margin: 5px 0;
+}
+li {
+  margin: 2px 0;
+}
+a {
+  color: var(--brand);
+  text-decoration: none;
+}
+code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 8.6pt;
+  background: var(--soft);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 8px 11px;
+  border-radius: 6px;
+  font-size: 8.4pt;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  break-inside: avoid;
+  margin: 6px 0;
+}
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+.sourceCode .co,
+pre .co {
+  color: #94a3b8;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 8.8pt;
+  break-inside: avoid;
+}
+th {
+  background: var(--soft);
+  text-align: left;
+  font-weight: 600;
+}
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 4px 7px;
+  vertical-align: top;
+}
+blockquote {
+  margin: 8px 0;
+  padding: 7px 11px;
+  background: #eef5ff;
+  border-left: 4px solid var(--brand);
+  border-radius: 0 6px 6px 0;
+}
+blockquote p {
+  margin: 0;
+}
+hr {
+  display: none;
+}
+.footer-note {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 8.5pt;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}

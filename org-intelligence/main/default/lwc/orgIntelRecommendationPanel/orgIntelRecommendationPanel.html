@@ -1,0 +1,464 @@
+<template>
+  <section class="rp-panel" aria-label="Recommendation detail">
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the recommendation"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The recommendation could not be loaded"
+        error={error}
+      ></c-org-intel-error-panel>
+    </template>
+
+    <template lwc:else>
+      <!-- En-tête compact : actions en icônes, badges, puis faits clés en liste de définitions -->
+      <header class="header">
+        <div class="header-top">
+          <div class="rp-eyebrow-row">
+            <c-org-intel-badge
+              label={severity.label}
+              tone={severity.tone}
+              title={severityTitle}
+            ></c-org-intel-badge>
+            <template lwc:if={severityAdjusted}>
+              <c-org-intel-badge
+                label={adjustedLabel}
+                tone="neutral"
+              ></c-org-intel-badge>
+            </template>
+            <template lwc:if={notDetected}>
+              <c-org-intel-badge
+                label="No longer detected"
+                tone="good"
+              ></c-org-intel-badge>
+            </template>
+            <template lwc:if={isOverdue}>
+              <c-org-intel-badge
+                label="Overdue"
+                tone="critical"
+              ></c-org-intel-badge>
+            </template>
+            <span class="eyebrow" title={ruleLabel}
+              >{rec.name} · {ruleLabel}</span
+            >
+          </div>
+          <div class="header-actions">
+            <template lwc:if={isCollaborative}>
+              <lightning-button-icon-stateful
+                icon-name="utility:favorite"
+                selected={detail.isFollowing}
+                alternative-text={followLabel}
+                title={followTitle}
+                size="small"
+                onclick={handleFollow}
+              ></lightning-button-icon-stateful>
+            </template>
+            <template lwc:if={hasContextHub}>
+              <lightning-button-icon
+                icon-name="utility:share"
+                alternative-text="Export context"
+                title="Export context to the Context Hub"
+                size="small"
+                onclick={handleExport}
+              ></lightning-button-icon>
+            </template>
+            <template lwc:if={rec.jiraIssueUrl}>
+              <a
+                href={rec.jiraIssueUrl}
+                target="_blank"
+                rel="noopener"
+                class="jira-link"
+                title="Open the Jira issue"
+                >{rec.jiraIssueKey} ↗</a
+              >
+            </template>
+            <template lwc:else>
+              <lightning-button-icon
+                icon-name="utility:send"
+                alternative-text={jiraTitle}
+                title={jiraTitle}
+                size="small"
+                onclick={handleExportJira}
+              ></lightning-button-icon>
+            </template>
+            <template lwc:if={isCollaborative}>
+              <lightning-button-icon
+                icon-name="utility:new_window"
+                alternative-text="Open the record page"
+                title="Open the record page"
+                size="small"
+                onclick={handleOpenRecord}
+              ></lightning-button-icon>
+            </template>
+            <lightning-button-icon
+              icon-name="utility:close"
+              variant="bare"
+              alternative-text="Close the detail"
+              title="Close"
+              onclick={handleClose}
+            ></lightning-button-icon>
+          </div>
+        </div>
+        <h2 class="title">{rec.title}</h2>
+        <p class="rp-meta">
+          <template for:each={metaParts} for:item="part">
+            <span key={part.key} class={part.className} title={part.title}
+              ><template lwc:if={part.separator}
+                ><span class="rp-sep" aria-hidden="true">·</span></template
+              >{part.value}</span
+            >
+          </template>
+        </p>
+      </header>
+
+      <!-- Travail : assignation, échéance, statut sur une ligne ; motif à la demande -->
+      <div class="work">
+        <div class="field field-assignee" lwc:if={isCollaborative}>
+          <div class="field-label">
+            <span>Assigned to</span>
+            <template lwc:if={showAssignToMe}>
+              <button type="button" class="link" onclick={handleAssignToMe}>
+                Assign to me
+              </button>
+            </template>
+          </div>
+          <lightning-record-picker
+            label="Assigned to"
+            variant="label-hidden"
+            placeholder="Search a user…"
+            object-api-name="User"
+            value={rec.assignedToId}
+            filter={userFilter}
+            disabled={readOnly}
+            onchange={handleAssigneeChange}
+          ></lightning-record-picker>
+        </div>
+        <div class="field field-assignee" lwc:if={isLocal}>
+          <div class="field-label">
+            <span
+              >Owner
+              <lightning-helptext
+                content="Free text: who handles it. Kept in this browser and in the shared files."
+              ></lightning-helptext
+            ></span>
+          </div>
+          <lightning-input
+            label="Owner"
+            variant="label-hidden"
+            placeholder="Name or team"
+            value={draftOwner}
+            max-length="80"
+            disabled={readOnly}
+            onchange={handleOwnerChange}
+          ></lightning-input>
+        </div>
+        <div class="field">
+          <div class="field-label"><span>Due date</span></div>
+          <lightning-input
+            type="date"
+            label="Due date"
+            variant="label-hidden"
+            value={rec.dueDate}
+            disabled={readOnly}
+            onchange={handleDueDateChange}
+          ></lightning-input>
+        </div>
+        <div class="field">
+          <div class="field-label">
+            <span>Status</span>
+            <template lwc:if={canAddReason}>
+              <template lwc:if={showReason}></template>
+              <template lwc:else>
+                <button type="button" class="link" onclick={handleShowReason}>
+                  Add reason
+                </button>
+              </template>
+            </template>
+          </div>
+          <lightning-combobox
+            label="Status"
+            variant="label-hidden"
+            options={statusOptions}
+            value={draftStatus}
+            disabled={readOnly}
+            onchange={handleStatusChange}
+          ></lightning-combobox>
+        </div>
+        <template lwc:if={showReason}>
+          <div class="field field-wide">
+            <div class="field-label">
+              <span
+                >{reasonLabel}
+                <lightning-helptext
+                  content="Visible in the history of the recommendation."
+                ></lightning-helptext
+              ></span>
+            </div>
+            <lightning-textarea
+              label={reasonLabel}
+              variant="label-hidden"
+              value={draftReason}
+              max-length="255"
+              disabled={readOnly}
+              placeholder="Why this decision?"
+              onchange={handleReasonChange}
+              class="reason"
+            ></lightning-textarea>
+          </div>
+        </template>
+        <template lwc:if={isLocal}>
+          <div class="field field-wide">
+            <div class="field-label"><span>Notes</span></div>
+            <lightning-textarea
+              label="Notes"
+              variant="label-hidden"
+              value={draftNotes}
+              max-length="4000"
+              disabled={readOnly}
+              placeholder="Context, links, next steps…"
+              onchange={handleNotesChange}
+              class="notes"
+            ></lightning-textarea>
+          </div>
+        </template>
+        <template lwc:if={decisionChanged}>
+          <div class="field-wide work-actions">
+            <lightning-button
+              variant="neutral"
+              label="Cancel"
+              onclick={handleCancelDecision}
+            ></lightning-button>
+            <lightning-button
+              variant="brand"
+              label="Save decision"
+              disabled={saveDecisionDisabled}
+              onclick={handleSaveDecision}
+            ></lightning-button>
+          </div>
+        </template>
+        <template lwc:if={readOnly}>
+          <p class="field-wide muted">
+            You can read this recommendation but not change it.
+          </p>
+        </template>
+      </div>
+
+      <lightning-tabset variant="scoped">
+        <!-- Analyse -->
+        <lightning-tab label="Analysis" value="analysis">
+          <div class="stack">
+            <template lwc:if={detail.description}>
+              <div>
+                <h3 class="label">What was found</h3>
+                <p class="text">{detail.description}</p>
+              </div>
+            </template>
+            <template lwc:if={detail.justification}>
+              <div>
+                <h3 class="label">Why it matters · evidence</h3>
+                <p class="text evidence">{detail.justification}</p>
+              </div>
+            </template>
+            <template lwc:if={detail.suggestedAction}>
+              <div class="action">
+                <lightning-icon
+                  icon-name="utility:light_bulb"
+                  size="x-small"
+                ></lightning-icon>
+                <div>
+                  <h3 class="label">Suggested action</h3>
+                  <p class="text">{detail.suggestedAction}</p>
+                </div>
+              </div>
+            </template>
+            <template lwc:if={hasAffected}>
+              <div>
+                <h3 class="label">Affected components</h3>
+                <ul class="chips">
+                  <template for:each={affected} for:item="component">
+                    <li key={component} class="chip">{component}</li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+            <div class="rule-line">
+              <h3 class="label">Rule</h3>
+              <span class="rule-name">{ruleLabel}</span>
+              <code class="rule-code">{rec.ruleCode}</code>
+              <template lwc:if={ruleHelp}>
+                <lightning-helptext content={ruleHelp}></lightning-helptext>
+              </template>
+            </div>
+            <template lwc:if={hasRelated}>
+              <div>
+                <h3 class="label">
+                  Other recommendations on {rec.componentName}
+                </h3>
+                <ul class="related">
+                  <template for:each={related} for:item="item">
+                    <li key={item.id}>
+                      <c-org-intel-badge
+                        label={item.severityLabel}
+                        tone={item.severityTone}
+                      ></c-org-intel-badge>
+                      <a
+                        href="#"
+                        data-id={item.id}
+                        onclick={handleSelectRelated}
+                        >{item.title}</a
+                      >
+                      <span class="muted">{item.status}</span>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+          </div>
+        </lightning-tab>
+
+        <!-- Discussion (édition collaborative) -->
+        <lightning-tab
+          lwc:if={isCollaborative}
+          label={discussionLabel}
+          value="discussion"
+        >
+          <div class="stack">
+            <c-org-intel-mention-input
+              busy={isPosting}
+              onpost={handlePost}
+            ></c-org-intel-mention-input>
+            <template lwc:if={hasComments}>
+              <ul class="comments">
+                <template for:each={comments} for:item="comment">
+                  <li key={comment.id} class="comment">
+                    <div class="comment-main">
+                      <template lwc:if={comment.authorPhotoUrl}>
+                        <img
+                          class="avatar"
+                          src={comment.authorPhotoUrl}
+                          alt=""
+                        />
+                      </template>
+                      <template lwc:else>
+                        <span class="avatar avatar-initials"
+                          >{comment.initials}</span
+                        >
+                      </template>
+                      <div class="comment-body">
+                        <p class="comment-head">
+                          <strong>{comment.authorName}</strong>
+                          <span class="muted" title={comment.exactDate}
+                            >{comment.when}</span
+                          >
+                        </p>
+                        <p class="comment-text">
+                          <template for:each={comment.parts} for:item="part">
+                            <span key={part.key} class={part.className}
+                              >{part.text}</span
+                            >
+                          </template>
+                        </p>
+                        <button
+                          type="button"
+                          class="link"
+                          data-id={comment.id}
+                          onclick={handleReply}
+                        >
+                          Reply
+                        </button>
+                      </div>
+                    </div>
+                    <template for:each={comment.replies} for:item="reply">
+                      <div key={reply.id} class="comment-main reply">
+                        <template lwc:if={reply.authorPhotoUrl}>
+                          <img
+                            class="avatar small"
+                            src={reply.authorPhotoUrl}
+                            alt=""
+                          />
+                        </template>
+                        <template lwc:else>
+                          <span class="avatar small avatar-initials"
+                            >{reply.initials}</span
+                          >
+                        </template>
+                        <div class="comment-body">
+                          <p class="comment-head">
+                            <strong>{reply.authorName}</strong>
+                            <span class="muted" title={reply.exactDate}
+                              >{reply.when}</span
+                            >
+                          </p>
+                          <p class="comment-text">
+                            <template for:each={reply.parts} for:item="part">
+                              <span key={part.key} class={part.className}
+                                >{part.text}</span
+                              >
+                            </template>
+                          </p>
+                        </div>
+                      </div>
+                    </template>
+                    <template lwc:if={comment.isReplying}>
+                      <div class="reply">
+                        <c-org-intel-mention-input
+                          data-parent={comment.id}
+                          placeholder="Reply… Type @ to mention someone"
+                          button-label="Reply"
+                          busy={isPosting}
+                          onpost={handleReplyPost}
+                        ></c-org-intel-mention-input>
+                      </div>
+                    </template>
+                  </li>
+                </template>
+              </ul>
+            </template>
+            <template lwc:else>
+              <p class="empty">
+                No comment yet. Type @ to mention a colleague.
+              </p>
+            </template>
+          </div>
+        </lightning-tab>
+
+        <!-- Historique -->
+        <lightning-tab label={historyLabel} value="history">
+          <ol class="timeline">
+            <template for:each={timeline} for:item="item">
+              <li key={item.key} class="timeline-item">
+                <span class="timeline-icon">
+                  <lightning-icon
+                    icon-name={item.icon}
+                    size="x-small"
+                  ></lightning-icon>
+                </span>
+                <div class="timeline-body">
+                  <p class="timeline-title">{item.title}</p>
+                  <template lwc:if={item.detail}>
+                    <p class="timeline-detail">{item.detail}</p>
+                  </template>
+                  <p class="muted" title={item.when}>
+                    {item.relative}
+                    <template lwc:if={item.who}> · by {item.who}</template>
+                  </p>
+                </div>
+              </li>
+            </template>
+          </ol>
+          <p class="muted footnote">
+            <template lwc:if={detail.createdByName}>
+              Created by {detail.createdByName}.
+            </template>
+          </p>
+        </lightning-tab>
+      </lightning-tabset>
+    </template>
+  </section>
+</template>

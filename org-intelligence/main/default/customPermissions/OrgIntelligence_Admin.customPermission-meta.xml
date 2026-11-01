@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description
+  >Autorise le lancement des scans et la gestion des paramètres Org Intelligence (contrôlé côté serveur).</description>
+    <isLicensed>false</isLicensed>
+    <label>Org Intelligence - Admin</label>
+</CustomPermission>

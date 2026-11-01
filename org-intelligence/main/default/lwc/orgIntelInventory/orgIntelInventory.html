@@ -1,0 +1,255 @@
+<template>
+  <div class="inventory">
+    <template lwc:if={isOverview}>
+      <div class="toolbar">
+        <div>
+          <h2 class="page-title">
+            Inventory
+            <lightning-helptext
+              content="Metadata lists computed on demand, with what to review on each item. Some lists need the Tooling API connection (Settings)."
+            ></lightning-helptext>
+          </h2>
+          <p class="muted">{overviewCaption}</p>
+        </div>
+        <div class="toolbar-actions">
+          <c-org-intel-browser-badge
+            help="Lists are computed on demand and kept in this browser only: nothing is stored in the org. Use the Data menu to save them to a file and share them with another administrator."
+          ></c-org-intel-browser-badge>
+          <c-org-intel-data-menu
+            kind="inventory"
+            allow-clear
+            disable-save={noCache}
+            clear-message="Delete every list kept in this browser? They are computed again on demand."
+            onsave={handleSaveFile}
+            onopen={handleOpenFile}
+            onclear={handleClearCache}
+            onerror={handleDataError}
+          ></c-org-intel-data-menu>
+          <c-org-intel-export-menu
+            compact
+            disabled={noCache}
+            alternative-text="Export every loaded list"
+            onexport={handleExportAll}
+          ></c-org-intel-export-menu>
+          <lightning-button
+            variant="brand"
+            label={scanLabel}
+            icon-name="utility:refresh"
+            onclick={handleScanAll}
+            disabled={scanDisabled}
+          ></lightning-button>
+        </div>
+      </div>
+
+      <template for:each={groups} for:item="group">
+        <section key={group.name} class="group" aria-label={group.name}>
+          <h3 class="group-title">{group.name}</h3>
+          <div class="tiles">
+            <template for:each={group.datasets} for:item="dataset">
+              <button
+                key={dataset.name}
+                class={dataset.tileClass}
+                title={dataset.title}
+                data-name={dataset.name}
+                onclick={handleSelect}
+              >
+                <span class="tile-label">{dataset.label}</span>
+                <span class="tile-total">{dataset.totalText}</span>
+                <span class="tile-issues">{dataset.issuesText}</span>
+                <template lwc:if={dataset.isLoading}>
+                  <lightning-spinner
+                    size="x-small"
+                    alternative-text="Loading"
+                  ></lightning-spinner>
+                </template>
+              </button>
+            </template>
+          </div>
+        </section>
+      </template>
+    </template>
+
+    <template lwc:else>
+      <div class="toolbar">
+        <div class="title-row">
+          <lightning-button-icon
+            icon-name="utility:back"
+            variant="bare"
+            alternative-text="Back to the inventory"
+            title="Back to the inventory"
+            onclick={handleBack}
+          ></lightning-button-icon>
+          <div>
+            <h2 class="page-title">{currentLabel}</h2>
+            <p class="muted">{currentCaption}</p>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <c-org-intel-export-menu
+            compact
+            disabled={isLoadingCurrent}
+            alternative-text="Export the items shown"
+            onexport={handleExport}
+          ></c-org-intel-export-menu>
+          <lightning-button
+            label="Refresh"
+            icon-name="utility:refresh"
+            onclick={handleRefresh}
+            disabled={isRefreshing}
+          ></lightning-button>
+        </div>
+      </div>
+
+      <template lwc:if={isLoadingCurrent}>
+        <div class="loading" role="status">
+          <lightning-spinner
+            alternative-text="Loading the list"
+            size="medium"
+          ></lightning-spinner>
+        </div>
+      </template>
+      <template lwc:elseif={error}>
+        <c-org-intel-error-panel
+          title="The list could not be loaded"
+          error={error}
+          show-retry
+          onretry={handleRefresh}
+        ></c-org-intel-error-panel>
+      </template>
+      <template lwc:else>
+        <template lwc:if={hasWarnings}>
+          <p class="note" title={warningSummary}>
+            <lightning-icon
+              icon-name="utility:info"
+              size="xx-small"
+              alternative-text="Note"
+            ></lightning-icon>
+            <span class="note-text">{warningSummary}</span>
+          </p>
+        </template>
+
+        <div class="filters">
+          <lightning-input
+            type="search"
+            class="search"
+            label="Search"
+            variant="label-hidden"
+            placeholder="Search a name, an object, an issue…"
+            value={search}
+            onchange={handleSearch}
+          ></lightning-input>
+          <lightning-input
+            type="toggle"
+            label="Only items to review"
+            checked={onlyIssues}
+            message-toggle-active=""
+            message-toggle-inactive=""
+            onchange={handleOnlyIssues}
+          ></lightning-input>
+          <lightning-input
+            type="toggle"
+            label="Hide managed packages"
+            checked={hideManaged}
+            message-toggle-active=""
+            message-toggle-inactive=""
+            onchange={handleHideManaged}
+          ></lightning-input>
+        </div>
+
+        <template lwc:if={hasRows}>
+          <ul class="items">
+            <template for:each={rows} for:item="row">
+              <li key={row.id} class={row.rowClass}>
+                <div class="item-row">
+                  <button
+                    class="item-toggle"
+                    disabled={row.cannotOpen}
+                    data-id={row.id}
+                    onclick={handleToggle}
+                    aria-expanded={row.isOpen}
+                    title="Show the details"
+                  >
+                    <lightning-icon
+                      icon-name={row.toggleIcon}
+                      size="xx-small"
+                      alternative-text="Details"
+                    ></lightning-icon>
+                  </button>
+                  <div class="item-main" style={row.nameStyle}>
+                    <span class="item-name">
+                      {row.displayName}
+                      <template lwc:if={row.namespace}>
+                        <span class="pill">{row.namespace}</span>
+                      </template>
+                    </span>
+                    <span class="item-meta">{row.apiName} {row.meta}</span>
+                  </div>
+                  <span class="item-figure" title="API version"
+                    >{row.apiText}</span
+                  >
+                  <span class="item-figure" title="Used by / members"
+                    >{row.usedText}</span
+                  >
+                  <span class="item-issue">
+                    <template lwc:if={row.hasIssues}>
+                      <span class="issue-tag">{row.firstIssue}</span>
+                      <span class="issue-more">{row.moreIssues}</span>
+                    </template>
+                  </span>
+                  <span class="item-link">
+                    <template lwc:if={row.hasSetupLink}>
+                      <a
+                        href={row.setupLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open in Setup"
+                      >
+                        <lightning-icon
+                          icon-name="utility:new_window"
+                          size="xx-small"
+                          alternative-text="Open in Setup"
+                        ></lightning-icon>
+                      </a>
+                    </template>
+                  </span>
+                </div>
+                <template lwc:if={row.isOpen}>
+                  <div class="item-detail">
+                    <template lwc:if={row.description}>
+                      <p>{row.description}</p>
+                    </template>
+                    <ul class="issue-list">
+                      <template for:each={row.issueList} for:item="issue">
+                        <li key={issue.key}>{issue.text}</li>
+                      </template>
+                    </ul>
+                    <template lwc:if={row.modifiedText}>
+                      <p class="muted">Last modified {row.modifiedText}</p>
+                    </template>
+                  </div>
+                </template>
+              </li>
+            </template>
+          </ul>
+          <template lwc:if={hasMore}>
+            <div class="more">
+              <lightning-button
+                variant="base"
+                label={moreLabel}
+                onclick={handleMore}
+              ></lightning-button>
+            </div>
+          </template>
+        </template>
+        <template lwc:else>
+          <c-org-intel-empty-state
+            title={emptyText}
+            message="Turn off the filters to see every item."
+            icon-name="utility:check"
+            variant="success"
+          ></c-org-intel-empty-state>
+        </template>
+      </template>
+    </template>
+  </div>
+</template>

@@ -1,0 +1,508 @@
+<template>
+  <div class="recommendations">
+    <div class="toolbar">
+      <div>
+        <div class="title-row">
+          <h2 class="page-title">Recommendations</h2>
+          <lightning-helptext content={titleHelp}></lightning-helptext>
+        </div>
+        <p class="muted">{subtitle}</p>
+        <template lwc:if={isLocal}>
+          <p class="local-note">
+            <c-org-intel-browser-badge
+              help={browserHelp}
+            ></c-org-intel-browser-badge>
+            <button
+              type="button"
+              class="link-button"
+              title="Assignment, @mentions, notifications and shared history"
+              onclick={handleOpenModules}
+            >
+              Collaboration requires the Recommendations module
+            </button>
+          </p>
+        </template>
+      </div>
+      <div class="toolbar-actions">
+        <c-org-intel-data-menu
+          kind={fileKind}
+          allow-clear={isLocal}
+          disable-save={isLoading}
+          open-label={openLabel}
+          clear-label="Clear recommendations"
+          clear-message="Delete the recommendations and decisions stored in this browser? Save them to a file first if you need them."
+          onsave={handleDataSave}
+          onopen={handleDataOpen}
+          onclear={handleDataClear}
+          onerror={handleDataError}
+        ></c-org-intel-data-menu>
+        <input
+          type="file"
+          accept=".json,application/json"
+          class="import-file"
+          onchange={handleImportFile}
+        />
+        <c-org-intel-export-menu
+          onexport={handleExport}
+          disabled={isLoading}
+          alternative-text="Export the recommendations shown"
+        ></c-org-intel-export-menu>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <template lwc:if={showPushBanner}>
+      <div class="push-banner" role="status">
+        <span class="push-banner-text">{pushText}</span>
+        <lightning-button
+          variant="brand"
+          label="Push local decisions to shared recommendations"
+          disabled={isPushing}
+          onclick={handlePushLocal}
+        ></lightning-button>
+      </div>
+    </template>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading recommendations"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The recommendations could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+
+    <template lwc:elseif={hasData}>
+      <!-- Domaines -->
+      <nav class="domains" aria-label="Domains">
+        <template for:each={domainTabs} for:item="tab">
+          <button
+            key={tab.key}
+            type="button"
+            class={tab.className}
+            style={tab.style}
+            data-value={tab.value}
+            aria-pressed={tab.selected}
+            title={tab.description}
+            onclick={handleDomain}
+          >
+            <span class="domain-icon">
+              <lightning-icon
+                icon-name={tab.icon}
+                size="xx-small"
+              ></lightning-icon>
+            </span>
+            <span class="domain-label">{tab.label}</span>
+            <span class="domain-count">{tab.count}</span>
+            <template lwc:if={tab.hasUrgent}>
+              <span class="domain-urgent" title={tab.urgentTitle}
+                >{tab.urgent}</span
+              >
+            </template>
+          </button>
+        </template>
+      </nav>
+
+      <!-- Vues -->
+      <div class="views" role="tablist" aria-label="Views">
+        <template for:each={views} for:item="item">
+          <button
+            key={item.name}
+            type="button"
+            role="tab"
+            class={item.className}
+            data-name={item.name}
+            aria-selected={item.selected}
+            onclick={handleView}
+          >
+            {item.label}<span class={item.countClass}>{item.count}</span>
+          </button>
+        </template>
+      </div>
+
+      <!-- Filtres -->
+      <div class="filters">
+        <label class="select-all" title="Select all visible recommendations">
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            onchange={handleSelectAll}
+            aria-label="Select all visible recommendations"
+          />
+          <span class="count">{countText}</span>
+        </label>
+        <lightning-input
+          type="search"
+          label="Search"
+          variant="label-hidden"
+          placeholder="Search a title, component, rule or person…"
+          value={search}
+          onchange={handleSearch}
+          class="filter-search"
+        ></lightning-input>
+        <div class="chips" role="group" aria-label="Severity">
+          <template for:each={severityChips} for:item="chip">
+            <button
+              key={chip.value}
+              type="button"
+              class={chip.className}
+              data-value={chip.value}
+              aria-pressed={chip.pressed}
+              onclick={handleSeverityChip}
+            >
+              <span class="chip-dot"></span>{chip.label}
+              <span class="chip-count">{chip.count}</span>
+            </button>
+          </template>
+        </div>
+        <div class="filter-actions">
+          <lightning-combobox
+            label="Sort by"
+            variant="label-inline"
+            options={sortOptions}
+            value={sortBy}
+            onchange={handleSort}
+            class="sort"
+          ></lightning-combobox>
+          <lightning-button
+            label={moreFiltersLabel}
+            icon-name="utility:filterList"
+            onclick={handleToggleFilters}
+          ></lightning-button>
+          <template lwc:if={hasActiveFilters}>
+            <lightning-button
+              variant="base"
+              label="Reset"
+              onclick={handleReset}
+            ></lightning-button>
+          </template>
+        </div>
+      </div>
+      <template lwc:if={showMoreFilters}>
+        <div class="more-filters">
+          <lightning-combobox
+            label="Category"
+            options={categoryOptions}
+            value={category}
+            onchange={handleCategory}
+          ></lightning-combobox>
+          <lightning-combobox
+            label="Component type"
+            options={typeOptions}
+            value={componentType}
+            onchange={handleComponentType}
+          ></lightning-combobox>
+        </div>
+      </template>
+
+      <div class={layoutClass}>
+        <article class="rc-card">
+          <template lwc:if={hasSelection}>
+            <header class="list-header">
+              <label class="check">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onchange={handleSelectAll}
+                  aria-label="Select all visible recommendations"
+                />
+              </label>
+              <div class="bulk" role="region" aria-label="Bulk actions">
+                <span class="bulk-count">{selectionText}</span>
+                <template lwc:if={isCollaborative}>
+                  <lightning-record-picker
+                    label="Assign to"
+                    variant="label-hidden"
+                    placeholder="Assign to…"
+                    object-api-name="User"
+                    filter={userFilter}
+                    onchange={handleBulkAssignee}
+                    class="bulk-assignee"
+                  ></lightning-record-picker>
+                </template>
+                <lightning-combobox
+                  label="Status"
+                  variant="label-hidden"
+                  options={bulkStatusOptions}
+                  value={bulkStatus}
+                  onchange={handleBulkStatus}
+                  class="bulk-status"
+                ></lightning-combobox>
+                <template lwc:if={bulkStatus}>
+                  <lightning-input
+                    label="Decision reason"
+                    variant="label-hidden"
+                    placeholder="Decision reason"
+                    value={bulkReason}
+                    required={bulkReasonRequired}
+                    max-length="255"
+                    onchange={handleBulkReason}
+                    class="bulk-reason"
+                  ></lightning-input>
+                </template>
+                <lightning-input
+                  type="date"
+                  label="Due date"
+                  variant="label-hidden"
+                  placeholder="Due date"
+                  value={bulkDueDate}
+                  onchange={handleBulkDueDate}
+                  class="bulk-due"
+                ></lightning-input>
+                <template lwc:if={canChangeSeverity}>
+                  <lightning-combobox
+                    label="Severity"
+                    variant="label-hidden"
+                    options={bulkSeverityOptions}
+                    value={bulkSeverity}
+                    onchange={handleBulkSeverity}
+                    class="bulk-severity"
+                  ></lightning-combobox>
+                </template>
+                <template lwc:if={isLocal}>
+                  <lightning-input
+                    label="Owner"
+                    variant="label-hidden"
+                    placeholder="Owner"
+                    value={bulkOwner}
+                    max-length="80"
+                    onchange={handleBulkOwner}
+                    class="bulk-owner"
+                  ></lightning-input>
+                  <lightning-input
+                    label="Add a note"
+                    variant="label-hidden"
+                    placeholder="Add a note"
+                    value={bulkNote}
+                    max-length="500"
+                    onchange={handleBulkNote}
+                    class="bulk-note"
+                  ></lightning-input>
+                </template>
+                <lightning-button
+                  variant="brand"
+                  label="Apply"
+                  disabled={bulkApplyDisabled}
+                  onclick={handleBulkApply}
+                ></lightning-button>
+                <template lwc:if={canExportJira}>
+                  <lightning-button
+                    label={exportJiraLabel}
+                    title={exportJiraTitle}
+                    icon-name="utility:share"
+                    onclick={handleExportJira}
+                  ></lightning-button>
+                </template>
+                <template lwc:if={isLocal}>
+                  <lightning-button-icon
+                    icon-name="utility:delete"
+                    alternative-text="Delete the selected recommendations"
+                    title="Delete from this browser (a new detection creates them again)"
+                    disabled={isApplying}
+                    onclick={handleBulkDelete}
+                  ></lightning-button-icon>
+                </template>
+                <lightning-button
+                  variant="base"
+                  label="Cancel"
+                  onclick={handleClearSelection}
+                ></lightning-button>
+              </div>
+            </header>
+          </template>
+
+          <template lwc:if={hasRows}>
+            <div class={listClass}>
+              <template for:each={groups} for:item="group">
+                <section key={group.key} class="group-block">
+                  <template lwc:if={group.showHeader}>
+                    <h3 class={group.headerClass}>
+                      <span class="group-dot"></span>{group.label}
+                      <span class="group-count">{group.count}</span>
+                    </h3>
+                  </template>
+                  <ul class="rows">
+                    <template for:each={group.rows} for:item="row">
+                      <li
+                        key={row.id}
+                        class={row.rowClass}
+                        data-id={row.id}
+                        tabindex="0"
+                        onclick={handleRowClick}
+                        onkeydown={handleRowKey}
+                      >
+                        <label class="check" onclick={stop}>
+                          <input
+                            type="checkbox"
+                            data-id={row.id}
+                            checked={row.isSelected}
+                            aria-label={row.checkboxLabel}
+                            onchange={handleSelect}
+                          />
+                        </label>
+                        <div class="row-main">
+                          <p class="row-title">{row.title}</p>
+                          <p class="row-meta">
+                            <span class="domain-tag" style={row.domainStyle}
+                              >{row.domainLabel}</span
+                            >
+                            <span class="mono">{row.componentName}</span>
+                            <template lwc:if={row.showOwner}>
+                              <span class="dot-sep">·</span>
+                              <span class="owner-tag" title="Owner"
+                                >{row.owner}</span
+                              >
+                            </template>
+                            <span class="dot-sep">·</span>
+                            <span>{row.name}</span>
+                            <template lwc:if={row.detectedText}>
+                              <span class="dot-sep">·</span>
+                              <span>{row.detectedText}</span>
+                            </template>
+                            <template lwc:if={row.gone}>
+                              <span class="gone">No longer detected</span>
+                            </template>
+                            <template lwc:if={row.jiraIssueKey}>
+                              <span class="jira-tag" title="Exported to Jira"
+                                >Jira {row.jiraIssueKey}</span
+                              >
+                            </template>
+                            <template lwc:elseif={row.jiraExportedAt}>
+                              <span
+                                class="jira-tag"
+                                title="Included in a Jira import file"
+                                >Jira file</span
+                              >
+                            </template>
+                          </p>
+                        </div>
+                        <div class="row-side">
+                          <c-org-intel-badge
+                            label={row.status}
+                            tone={row.statusTone}
+                            class="status"
+                          ></c-org-intel-badge>
+                          <span class="assignee" lwc:if={isCollaborative}>
+                            <template lwc:if={row.hasAssignee}>
+                              <span class="avatar" title={row.assignedToName}
+                                >{row.assigneeInitials}</span
+                              >
+                              <span class="assignee-name"
+                                >{row.assignedToName}</span
+                              >
+                            </template>
+                            <template lwc:else>
+                              <span
+                                class="avatar avatar-empty"
+                                title="Unassigned"
+                              >
+                                <lightning-icon
+                                  icon-name="utility:adduser"
+                                  size="xx-small"
+                                ></lightning-icon>
+                              </span>
+                              <span class="assignee-name muted"
+                                >Unassigned</span
+                              >
+                            </template>
+                          </span>
+                          <span class={row.dueClass} title={row.dueTitle}>
+                            <template lwc:if={row.dueText}>
+                              <lightning-icon
+                                icon-name="utility:event"
+                                size="xx-small"
+                              ></lightning-icon>
+                              {row.dueText}
+                            </template>
+                          </span>
+                          <span class="comments" title="Comments">
+                            <template lwc:if={row.hasComments}>
+                              <lightning-icon
+                                icon-name="utility:comments"
+                                size="xx-small"
+                              ></lightning-icon>
+                              {row.commentCount}
+                            </template>
+                          </span>
+                        </div>
+                      </li>
+                    </template>
+                  </ul>
+                </section>
+              </template>
+              <template lwc:if={hasMore}>
+                <div class="more">
+                  <lightning-button
+                    label={moreLabel}
+                    onclick={handleShowMore}
+                  ></lightning-button>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template lwc:else>
+            <div class="list-empty">
+              <p>No recommendation matches.</p>
+              <template lwc:if={hasActiveFilters}>
+                <lightning-button
+                  variant="base"
+                  label="Clear the filters"
+                  onclick={handleReset}
+                ></lightning-button>
+              </template>
+            </div>
+          </template>
+        </article>
+
+        <template lwc:if={selectedId}>
+          <div class="side">
+            <c-org-intel-recommendation-panel
+              modules={modules}
+              user-name={userName}
+              record-id={selectedId}
+              onclose={handlePanelClose}
+              onchanged={handlePanelChanged}
+              onselect={handlePanelSelect}
+              onnavigate={handlePanelNavigate}
+            ></c-org-intel-recommendation-panel>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template lwc:else>
+      <c-org-intel-empty-state
+        title="No recommendation yet"
+        message="Run a scan to get the first ones, or open a file shared by another administrator."
+        icon-name="utility:task"
+      >
+        <lightning-button
+          variant="brand"
+          label="New scan"
+          icon-name="utility:search"
+          onclick={handleNewScan}
+        ></lightning-button>
+        <lightning-button
+          label="Open a file"
+          icon-name="utility:upload"
+          disabled={isImporting}
+          onclick={handleImportClick}
+        ></lightning-button>
+      </c-org-intel-empty-state>
+    </template>
+  </div>
+</template>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ScoreExcludeIgnored__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description
+  >Les constats dont la recommandation est Ignored (risque accepté) ne comptent pas dans le score.</description>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Score - exclude ignored</label>
+    <type>Checkbox</type>
+</CustomField>

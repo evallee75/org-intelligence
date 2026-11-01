@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Apex - Low code coverage</label>
+    <protected>true</protected>
+    <values>
+        <field>Domain__c</field>
+        <value xsi:type="xsd:string">ApexClass</value>
+    </values>
+    <values>
+        <field>IsEnabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Severity__c</field>
+        <value xsi:type="xsd:string">Medium</value>
+    </values>
+    <values>
+        <field>Category__c</field>
+        <value xsi:type="xsd:string">Reliability</value>
+    </values>
+    <values>
+        <field>Confidence__c</field>
+        <value xsi:type="xsd:string">Medium</value>
+    </values>
+    <values>
+        <field>Threshold__c</field>
+        <value xsi:type="xsd:double">75</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >The latest code coverage measured for the class is below the threshold (percentage). Requires the Tooling API.</value>
+    </values>
+    <values>
+        <field>Rationale__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Poorly covered code is risky to change and can block deployments. Coverage reflects the last test runs in this org, which may be partial or outdated.</value>
+    </values>
+    <values>
+        <field>SuggestedAction__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Run all tests, then add tests covering the main scenarios and error cases of the class.</value>
+    </values>
+</CustomMetadata>

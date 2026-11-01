@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Automation - Loop between objects</label>
+    <protected>true</protected>
+    <values>
+        <field>Domain__c</field>
+        <value xsi:type="xsd:string">Flow</value>
+    </values>
+    <values>
+        <field>IsEnabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Severity__c</field>
+        <value xsi:type="xsd:string">High</value>
+    </values>
+    <values>
+        <field>Category__c</field>
+        <value xsi:type="xsd:string">Reliability</value>
+    </values>
+    <values>
+        <field>Confidence__c</field>
+        <value xsi:type="xsd:string">Medium</value>
+    </values>
+    <values>
+        <field>Threshold__c</field>
+        <value xsi:nil="true" />
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Automations form a chain that comes back to its starting object: each object updates the next one.</value>
+    </values>
+    <values>
+        <field>Rationale__c</field>
+        <value
+      xsi:type="xsd:string"
+    >A save can re-trigger the whole chain: limits are consumed several times and updates may loop. The risk depends on the entry criteria, which are listed for review.</value>
+    </values>
+    <values>
+        <field>SuggestedAction__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Check the entry criteria of each automation of the chain, add guards (only when fields change, bypass flags) or break the chain.</value>
+    </values>
+</CustomMetadata>

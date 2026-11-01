@@ -1,0 +1,35 @@
+<template>
+  <lightning-button-menu
+    label={label}
+    icon-name="utility:database"
+    menu-alignment="auto"
+    alternative-text="Data stored in this browser"
+    onselect={handleSelect}
+  >
+    <lightning-menu-item
+      value="save"
+      label={saveLabel}
+      prefix-icon-name="utility:download"
+      disabled={disableSave}
+    ></lightning-menu-item>
+    <lightning-menu-item
+      value="open"
+      label={openLabel}
+      prefix-icon-name="utility:upload"
+    ></lightning-menu-item>
+    <template lwc:if={allowClear}>
+      <lightning-menu-divider></lightning-menu-divider>
+      <lightning-menu-item
+        value="clear"
+        label={clearLabel}
+        prefix-icon-name="utility:delete"
+      ></lightning-menu-item>
+    </template>
+  </lightning-button-menu>
+  <input
+    class="oi-data-file"
+    type="file"
+    accept=".json,application/json"
+    onchange={handleFile}
+  />
+</template>

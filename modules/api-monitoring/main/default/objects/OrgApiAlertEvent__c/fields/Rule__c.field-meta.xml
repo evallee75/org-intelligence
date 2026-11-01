@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Rule__c</fullName>
+    <label>Rule</label>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <referenceTo>OrgApiAlertRule__c</referenceTo>
+    <relationshipLabel>Alerts</relationshipLabel>
+    <relationshipName>Alerts</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

@@ -1,0 +1,358 @@
+<template>
+  <div class="security">
+    <div class="toolbar">
+      <div>
+        <h2 class="page-title">Security</h2>
+        <p class="muted">
+          {subtitle}
+          <c-org-intel-browser-badge
+            help={badgeHelp}
+          ></c-org-intel-browser-badge>
+        </p>
+        <p lwc:if={showSessionNote} class="muted protection-note">
+          <lightning-icon
+            icon-name="utility:warning"
+            size="xx-small"
+            alternative-text="Warning"
+          ></lightning-icon>
+          {protectionMessage}
+          <lightning-button
+            variant="base"
+            label="Save to file"
+            onclick={handleExportData}
+          ></lightning-button>
+        </p>
+      </div>
+      <div class="toolbar-actions">
+        <template lwc:if={hasAudit}>
+          <lightning-button
+            label="Report"
+            title="Printable report (open it, then Print › Save as PDF)"
+            icon-name="utility:file"
+            onclick={handleReport}
+          ></lightning-button>
+          <c-org-intel-export-menu
+            compact
+            alternative-text="Export the checks and the concerned items"
+            onexport={handleExport}
+          ></c-org-intel-export-menu>
+        </template>
+        <c-org-intel-data-menu
+          kind="security-audit"
+          allow-clear
+          disable-save={noAudit}
+          clear-label="Clear stored audits"
+          clear-message="Delete the latest audit and its history stored in this browser? Save them to a file first if you need them."
+          onsave={handleExportData}
+          onopen={handleDataOpen}
+          onclear={handleClearData}
+          onerror={handleDataError}
+        ></c-org-intel-data-menu>
+        <lightning-button
+          variant="brand"
+          label={runLabel}
+          icon-name="utility:shield"
+          onclick={handleRun}
+          disabled={isRunning}
+        ></lightning-button>
+      </div>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the security audit"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The security audit could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:elseif={hasAudit}>
+      <template lwc:if={isRunning}>
+        <div class="running" role="status">
+          <lightning-spinner
+            alternative-text="Auditing the org"
+            size="small"
+          ></lightning-spinner>
+          <span>Auditing the org…</span>
+        </div>
+      </template>
+
+      <!-- Note et indicateurs -->
+      <section class="summary" aria-label="Security summary">
+        <div class={gradeClass}>
+          <span class="grade-letter">{audit.grade}</span>
+          <span class="grade-score">{audit.score} / 100</span>
+        </div>
+        <div class="summary-body">
+          <p class="grade-label">{gradeLabel}</p>
+          <div class="kpis">
+            <div class="kpi">
+              <span class="kpi-label">Failed</span>
+              <span class="kpi-value kpi-critical">{failedTotal}</span>
+              <span class="kpi-caption">{failedCaption}</span>
+            </div>
+            <div class="kpi">
+              <span class="kpi-label">Warnings</span>
+              <span class="kpi-value kpi-warning">{warningCount}</span>
+              <span class="kpi-caption">{passedCaption}</span>
+            </div>
+            <div class="kpi">
+              <span class="kpi-label"
+                >Health Check
+                <lightning-helptext
+                  content="Score computed by Salesforce (Setup › Health Check) against its security baseline. Read through the Tooling API connection."
+                ></lightning-helptext
+              ></span>
+              <span class="kpi-value">{healthCheckValue}</span>
+              <span class="kpi-caption">{healthCheckCaption}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <template lwc:if={isSandbox}>
+        <p class="note">
+          <lightning-icon
+            icon-name="utility:info"
+            size="xx-small"
+            alternative-text="Note"
+          ></lightning-icon>
+          Sandbox: logins and dormant accounts reflect the sandbox, not
+          production.
+        </p>
+      </template>
+
+      <!-- Familles : clic = filtre -->
+      <section class="areas" aria-label="Areas">
+        <template for:each={areas} for:item="area">
+          <button
+            key={area.name}
+            class={area.className}
+            title={area.label}
+            data-name={area.name}
+            onclick={handleArea}
+          >
+            <span class="area-name">{area.name}</span>
+            <span class="area-bar" aria-hidden="true">
+              <span class="seg seg-fail" style={area.failStyle}></span>
+              <span class="seg seg-warn" style={area.warnStyle}></span>
+              <span class="seg seg-pass" style={area.passStyle}></span>
+              <span class="seg seg-other" style={area.otherStyle}></span>
+            </span>
+            <span class="area-counts">
+              <span class="count-fail">{area.failed}</span>
+              <span class="count-warn">{area.warnings}</span>
+              <span class="count-pass">{area.passed}</span>
+            </span>
+          </button>
+        </template>
+      </section>
+
+      <!-- Filtres et actions -->
+      <div class="filters">
+        <lightning-input
+          type="search"
+          class="search"
+          label="Search"
+          variant="label-hidden"
+          placeholder="Search a check, a user, a profile…"
+          value={search}
+          onchange={handleSearch}
+        ></lightning-input>
+        <lightning-combobox
+          label="Area"
+          variant="label-hidden"
+          options={categoryOptions}
+          value={categoryFilter}
+          onchange={handleCategoryFilter}
+        ></lightning-combobox>
+        <lightning-combobox
+          label="Result"
+          variant="label-hidden"
+          options={statusFilters}
+          value={statusFilter}
+          onchange={handleStatusFilter}
+        ></lightning-combobox>
+        <template lwc:if={canSend}>
+          <div class="filter-actions">
+            <template lwc:if={selectedCount}>
+              <lightning-button
+                variant="base"
+                label="Clear"
+                onclick={handleClearSelection}
+              ></lightning-button>
+              <lightning-button
+                variant="brand-outline"
+                label={sendLabel}
+                icon-name="utility:task"
+                onclick={handleSend}
+                disabled={sendDisabled}
+              ></lightning-button>
+            </template>
+            <template lwc:else>
+              <lightning-button
+                variant="base"
+                label="Select all"
+                onclick={handleSelectAll}
+              ></lightning-button>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Contrôles : une ligne chacun, détail au clic -->
+      <template lwc:if={hasVisibleChecks}>
+        <template for:each={groups} for:item="group">
+          <article key={group.name} class="card">
+            <header class="group-header">
+              <h3 class="card-title">{group.name}</h3>
+              <span class="muted">{group.summary}</span>
+            </header>
+            <ul class="rows">
+              <template for:each={group.checks} for:item="check">
+                <li key={check.key} class={check.cardClass}>
+                  <div class="row">
+                    <span class="row-select">
+                      <template lwc:if={check.actionable}>
+                        <input
+                          type="checkbox"
+                          aria-label={check.checkboxLabel}
+                          data-key={check.key}
+                          checked={check.checked}
+                          onchange={handleSelect}
+                        />
+                      </template>
+                    </span>
+                    <button
+                      class="row-main"
+                      aria-expanded={check.expanded}
+                      data-key={check.key}
+                      onclick={handleToggle}
+                    >
+                      <lightning-icon
+                        icon-name={check.toggleIcon}
+                        size="xx-small"
+                        alternative-text={check.toggleLabel}
+                      ></lightning-icon>
+                      <span class="row-title">{check.title}</span>
+                      <span class="row-metric">{check.metric}</span>
+                    </button>
+                    <c-org-intel-badge
+                      label={check.severity}
+                      tone={check.severityTone}
+                    ></c-org-intel-badge>
+                    <c-org-intel-badge
+                      label={check.statusLabel}
+                      tone={check.statusTone}
+                    ></c-org-intel-badge>
+                  </div>
+                  <template lwc:if={check.expanded}>
+                    <div class="row-detail">
+                      <p class="detail-metric">{check.metric}</p>
+                      <template lwc:if={check.showAdvice}>
+                        <dl class="facts">
+                          <dt>Why it matters</dt>
+                          <dd>{check.risk}</dd>
+                          <dt>What to do</dt>
+                          <dd>{check.recommendation}</dd>
+                        </dl>
+                      </template>
+                      <template lwc:if={check.hasItems}>
+                        <table class="items">
+                          <tbody>
+                            <template
+                              for:each={check.visibleItems}
+                              for:item="item"
+                            >
+                              <tr key={item.key}>
+                                <th scope="row">{item.label}</th>
+                                <td>{item.detail}</td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                        <div class="items-footer">
+                          <span class="muted">{check.moreText}</span>
+                          <template lwc:if={check.canExpand}>
+                            <lightning-button
+                              variant="base"
+                              label={check.expandLabel}
+                              data-key={check.key}
+                              onclick={handleExpand}
+                            ></lightning-button>
+                          </template>
+                          <template lwc:if={check.canCollapse}>
+                            <lightning-button
+                              variant="base"
+                              label="Show less"
+                              data-key={check.key}
+                              onclick={handleCollapse}
+                            ></lightning-button>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </li>
+              </template>
+            </ul>
+          </article>
+        </template>
+      </template>
+      <template lwc:else>
+        <c-org-intel-empty-state
+          title="Nothing to show"
+          message="No check matches these filters."
+          icon-name="utility:filterList"
+          variant="success"
+        ></c-org-intel-empty-state>
+      </template>
+
+      <template lwc:if={hasTrend}>
+        <article class="card">
+          <header class="group-header">
+            <h3 class="card-title">Over time</h3>
+          </header>
+          <c-org-intel-trend-chart
+            title="Security over time"
+            mode="line"
+            points={trendPoints}
+            series={trendSeries}
+            y-max="100"
+          ></c-org-intel-trend-chart>
+        </article>
+      </template>
+    </template>
+    <template lwc:else>
+      <c-org-intel-empty-state
+        title="How secure is your org?"
+        message="25 read-only checks: administrators, MFA, dormant accounts, profiles and permission sets, guest access, sharing, integrations. Takes a few seconds, with a printable report."
+        icon-name="utility:shield"
+      >
+        <lightning-button
+          variant="brand"
+          label="Run audit"
+          onclick={handleRun}
+          disabled={isRunning}
+        ></lightning-button>
+      </c-org-intel-empty-state>
+      <template lwc:if={isRunning}>
+        <div class="running" role="status">
+          <lightning-spinner
+            alternative-text="Auditing the org"
+            size="small"
+          ></lightning-spinner>
+          <span>Auditing the org…</span>
+        </div>
+      </template>
+    </template>
+  </div>
+</template>

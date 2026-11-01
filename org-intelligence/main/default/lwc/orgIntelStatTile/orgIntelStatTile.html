@@ -1,0 +1,22 @@
+<template>
+  <article class="tile">
+    <header class="tile-header">
+      <template lwc:if={iconName}>
+        <lightning-icon
+          icon-name={iconName}
+          size="x-small"
+          class="tile-icon"
+        ></lightning-icon>
+      </template>
+      <h3 class="tile-label">{label}</h3>
+    </header>
+    <p class="tile-value">
+      {value}
+      <template lwc:if={unit}><span class="tile-unit">{unit}</span></template>
+    </p>
+    <template lwc:if={caption}>
+      <p class="tile-caption">{caption}</p>
+    </template>
+    <slot></slot>
+  </article>
+</template>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>List</customSettingsType>
+    <description
+  >Surcharges des règles du scanner saisies dans Settings (nom = code de la règle) : activation, gravité, seuil. Les valeurs par défaut restent dans le catalogue OrgScanRule__mdt livré avec l&apos;application.</description>
+    <enableFeeds>false</enableFeeds>
+    <label>Org Intelligence Rule Override</label>
+    <visibility>Public</visibility>
+</CustomObject>

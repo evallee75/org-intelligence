@@ -1,0 +1,292 @@
+:host {
+  display: block;
+  --au-flow: #7c5cdb;
+  --au-pb: #d9822b;
+  --au-apex: #2f6fd1;
+}
+
+.automation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--oi-text);
+}
+
+.au-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.muted {
+  font-size: 0.75rem;
+  color: var(--oi-text-muted);
+}
+
+.loading {
+  position: relative;
+  min-height: 12rem;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 10px;
+  background: var(--oi-accent-soft);
+  font-size: 0.8125rem;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-icon {
+  --slds-c-icon-color-foreground-default: var(--oi-accent);
+}
+
+/* Indicateurs */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.kpi {
+  --kpi-color: var(--oi-accent);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--oi-border);
+  border-radius: var(--oi-radius);
+  background: var(--oi-surface);
+  box-shadow: var(--oi-shadow);
+  text-align: left;
+  color: var(--oi-text);
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.kpi::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--kpi-color);
+  opacity: 0.85;
+}
+
+.kpi:hover {
+  transform: translateY(-1px);
+  border-color: var(--kpi-color);
+  box-shadow: var(--oi-shadow-pop);
+}
+
+.kpi:focus-visible {
+  outline: 2px solid var(--oi-accent);
+  outline-offset: 2px;
+}
+
+.kpi-accent {
+  --kpi-color: var(--oi-accent);
+}
+
+.kpi-violet {
+  --kpi-color: var(--au-flow);
+}
+
+.kpi-serious {
+  --kpi-color: var(--oi-serious);
+}
+
+.kpi-critical {
+  --kpi-color: var(--oi-critical);
+}
+
+.kpi-good {
+  --kpi-color: var(--oi-good);
+}
+
+.kpi-neutral {
+  --kpi-color: var(--oi-neutral);
+}
+
+.kpi-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 7px;
+  background: var(--kpi-color);
+}
+
+.kpi-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kpi-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Légende sur une ligne, texte complet dans l'infobulle */
+.kpi-caption,
+.kpi-split {
+  overflow: hidden;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--oi-text-muted);
+}
+
+.kpi-split {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.kpi-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.kpi-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+/* Onglets */
+.au-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--oi-border);
+  border-radius: 12px;
+  background: var(--oi-surface);
+  box-shadow: var(--oi-shadow);
+}
+
+.au-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3125rem 0.75rem;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--oi-text-muted);
+  cursor: pointer;
+}
+
+.au-tab:hover {
+  background: var(--oi-hover);
+  color: var(--oi-text);
+}
+
+.au-tab:focus-visible {
+  outline: 2px solid var(--oi-accent);
+  outline-offset: 1px;
+}
+
+.tab-icon {
+  --slds-c-icon-color-foreground-default: currentColor;
+}
+
+.tab-selected {
+  background: var(--oi-accent);
+  color: #ffffff;
+}
+
+.tab-selected:hover {
+  background: var(--oi-accent);
+  color: #ffffff;
+}
+
+.tab-badge {
+  max-width: 10rem;
+  overflow: hidden;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: var(--oi-tint-neutral);
+  color: var(--oi-text);
+}
+
+.tab-selected .tab-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.tab-badge-alert {
+  background: var(--oi-tint-serious);
+  color: var(--oi-text);
+}
+
+@media (max-width: 70em) {
+  .kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 48em) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .au-tabs {
+    align-self: stretch;
+    overflow-x: auto;
+  }
+}

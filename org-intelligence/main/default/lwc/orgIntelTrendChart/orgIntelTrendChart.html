@@ -1,0 +1,132 @@
+<template>
+  <figure class="chart">
+    <template lwc:if={showLegend}>
+      <ul class="legend" aria-hidden="true">
+        <template for:each={legend} for:item="item">
+          <li key={item.key}>
+            <span class="swatch" style={item.swatch}></span>{item.label}
+          </li>
+        </template>
+      </ul>
+    </template>
+    <template lwc:if={hasData}>
+      <div class="plot" onmouseleave={handleLeave}>
+        <svg viewBox={viewBox} class="svg" role="img" aria-label={title}>
+          <template for:each={gridLines} for:item="line">
+            <g key={line.key}>
+              <line
+                class="tc-grid"
+                x1={line.x1}
+                x2={line.x2}
+                y1={line.y}
+                y2={line.y}
+              ></line>
+              <text
+                class="axis"
+                x={line.labelX}
+                y={line.labelY}
+                text-anchor="end"
+              >
+                {line.label}
+              </text>
+            </g>
+          </template>
+          <template for:each={bars} for:item="bar">
+            <rect
+              key={bar.key}
+              x={bar.x}
+              y={bar.y}
+              width={bar.width}
+              height={bar.height}
+              rx="3"
+              fill={bar.fill}
+            ></rect>
+          </template>
+          <template for:each={lines} for:item="line">
+            <g key={line.key}>
+              <polyline
+                class="line"
+                points={line.path}
+                stroke={line.stroke}
+              ></polyline>
+              <template for:each={line.dots} for:item="dot">
+                <circle
+                  key={dot.key}
+                  cx={dot.cx}
+                  cy={dot.cy}
+                  r="4"
+                  fill={dot.fill}
+                  class="dot"
+                ></circle>
+              </template>
+            </g>
+          </template>
+          <template for:each={xLabels} for:item="label">
+            <text
+              key={label.key}
+              class="axis"
+              x={label.x}
+              y={label.y}
+              text-anchor="middle"
+            >
+              {label.text}
+            </text>
+          </template>
+          <template for:each={hitAreas} for:item="area">
+            <rect
+              key={area.key}
+              class={area.className}
+              x={area.x}
+              y={area.y}
+              width={area.width}
+              height={area.height}
+              data-index={area.index}
+              onmouseenter={handleEnter}
+            ></rect>
+          </template>
+        </svg>
+        <template lwc:if={tooltip}>
+          <div class="tc-tooltip" style={tooltip.style} role="status">
+            <p class="tooltip-title">{tooltip.title}</p>
+            <template lwc:if={tooltip.sublabel}
+              ><p class="tooltip-sub">{tooltip.sublabel}</p></template
+            >
+            <template for:each={tooltip.rows} for:item="row">
+              <p key={row.key} class="tooltip-row">
+                <span class="swatch" style={row.swatch}></span>
+                <span class="tooltip-label">{row.label}</span>
+                <span class="tooltip-value">{row.value}</span>
+              </p>
+            </template>
+          </div>
+        </template>
+      </div>
+      <table class="assistive">
+        <caption>
+          {title}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Point</th>
+            <template for:each={series} for:item="serie">
+              <th key={serie.key} scope="col">{serie.label}</th>
+            </template>
+          </tr>
+        </thead>
+        <tbody>
+          <template for:each={tableRows} for:item="row">
+            <tr key={row.key}>
+              <th scope="row">{row.label}</th>
+              <template for:each={row.cells} for:item="cell">
+                <td key={cell.key}>{cell.value}</td>
+              </template>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </template>
+    <template lwc:else>
+      <p class="empty">Not enough history yet.</p>
+    </template>
+  </figure>
+</template>

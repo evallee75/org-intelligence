@@ -1,0 +1,163 @@
+:host {
+  display: block;
+}
+
+.ms-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ms-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--oi-text);
+}
+
+.muted {
+  font-size: 0.75rem;
+  color: var(--oi-text-muted);
+}
+
+.ms-loading {
+  position: relative;
+  min-height: 12rem;
+}
+
+.ms-notice {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--oi-text);
+  background: var(--oi-accent-soft);
+  border: 1px solid var(--oi-accent);
+  border-radius: var(--oi-radius);
+}
+
+.ms-card {
+  padding: 0.5rem 0.75rem;
+  background: var(--oi-surface);
+  border: 1px solid var(--oi-border);
+  border-radius: var(--oi-radius);
+  box-shadow: var(--oi-shadow);
+  min-width: 0;
+}
+
+.ms-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ms-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--oi-text);
+}
+
+/* Étapes 1, 3 et 4 : une seule ligne (numéro, titre, actions) */
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-number {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--oi-accent);
+  background: var(--oi-accent-soft);
+}
+
+/* Étape faite */
+.step-done {
+  color: #ffffff;
+  background: var(--oi-good, #2e844a);
+}
+
+.step-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.module-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--oi-border);
+  border-radius: var(--oi-radius);
+}
+
+.module-card-ready {
+  border-color: var(--oi-border-good);
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.module-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--oi-text);
+}
+
+/* Description limitée à deux lignes (texte complet au survol) */
+.module-description {
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--oi-text-muted);
+}
+
+.module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}

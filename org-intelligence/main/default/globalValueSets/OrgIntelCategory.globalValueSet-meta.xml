@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customValue>
+        <fullName>Security</fullName>
+        <default>false</default>
+        <label>Security</label>
+    </customValue>
+    <customValue>
+        <fullName>Reliability</fullName>
+        <default>false</default>
+        <label>Reliability</label>
+    </customValue>
+    <customValue>
+        <fullName>Performance</fullName>
+        <default>false</default>
+        <label>Performance</label>
+    </customValue>
+    <customValue>
+        <fullName>Maintainability</fullName>
+        <default>false</default>
+        <label>Maintainability</label>
+    </customValue>
+    <customValue>
+        <fullName>Technical Debt</fullName>
+        <default>false</default>
+        <label>Technical Debt</label>
+    </customValue>
+    <customValue>
+        <fullName>Documentation</fullName>
+        <default>false</default>
+        <label>Documentation</label>
+    </customValue>
+    <customValue>
+        <fullName>Adoption</fullName>
+        <default>false</default>
+        <label>Adoption</label>
+    </customValue>
+    <description
+  >Catégorie fonctionnelle d&apos;un constat ou d&apos;une recommandation.</description>
+    <masterLabel>Org Intelligence - Category</masterLabel>
+    <sorted>false</sorted>
+</GlobalValueSet>

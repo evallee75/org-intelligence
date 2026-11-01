@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Flows - Outdated API version</label>
+    <protected>true</protected>
+    <values>
+        <field>Domain__c</field>
+        <value xsi:type="xsd:string">Flow</value>
+    </values>
+    <values>
+        <field>IsEnabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Severity__c</field>
+        <value xsi:type="xsd:string">Low</value>
+    </values>
+    <values>
+        <field>Category__c</field>
+        <value xsi:type="xsd:string">Technical Debt</value>
+    </values>
+    <values>
+        <field>Confidence__c</field>
+        <value xsi:type="xsd:string">High</value>
+    </values>
+    <values>
+        <field>Threshold__c</field>
+        <value xsi:type="xsd:double">10</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >The active flow version runs on an API version lagging far behind the most recent API version used in this org.</value>
+    </values>
+    <values>
+        <field>Rationale__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Flows keep the runtime behaviour of their API version and miss later improvements.</value>
+    </values>
+    <values>
+        <field>SuggestedAction__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Open the flow, save a new version on the current API version, test it and activate it.</value>
+    </values>
+</CustomMetadata>

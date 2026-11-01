@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Storage - Data storage near limit</label>
+    <protected>true</protected>
+    <values>
+        <field>Domain__c</field>
+        <value xsi:type="xsd:string">CustomObject</value>
+    </values>
+    <values>
+        <field>IsEnabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Severity__c</field>
+        <value xsi:type="xsd:string">High</value>
+    </values>
+    <values>
+        <field>Category__c</field>
+        <value xsi:type="xsd:string">Reliability</value>
+    </values>
+    <values>
+        <field>Confidence__c</field>
+        <value xsi:type="xsd:string">High</value>
+    </values>
+    <values>
+        <field>Threshold__c</field>
+        <value xsi:type="xsd:double">80</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Data storage use is above the threshold (percentage of the org limit).</value>
+    </values>
+    <values>
+        <field>Rationale__c</field>
+        <value
+      xsi:type="xsd:string"
+    >When data storage is full, records can no longer be created: integrations, imports and users are blocked.</value>
+    </values>
+    <values>
+        <field>SuggestedAction__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Archive or delete old records (logs, history, closed activities), or buy additional storage. Setup › Storage Usage shows the exact use per object.</value>
+    </values>
+</CustomMetadata>

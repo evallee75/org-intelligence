@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Storage - Activity volume</label>
+    <protected>true</protected>
+    <values>
+        <field>Domain__c</field>
+        <value xsi:type="xsd:string">CustomObject</value>
+    </values>
+    <values>
+        <field>IsEnabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Severity__c</field>
+        <value xsi:type="xsd:string">Low</value>
+    </values>
+    <values>
+        <field>Category__c</field>
+        <value xsi:type="xsd:string">Performance</value>
+    </values>
+    <values>
+        <field>Confidence__c</field>
+        <value xsi:type="xsd:string">Medium</value>
+    </values>
+    <values>
+        <field>Threshold__c</field>
+        <value xsi:type="xsd:double">100000</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Tasks, events and email messages together exceed the threshold (records).</value>
+    </values>
+    <values>
+        <field>Rationale__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Activities accumulate quickly; old ones are rarely read but slow down timelines and consume storage (emails count their real size).</value>
+    </values>
+    <values>
+        <field>SuggestedAction__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Enable activity archiving, and purge or export old emails and tasks according to a retention policy.</value>
+    </values>
+</CustomMetadata>

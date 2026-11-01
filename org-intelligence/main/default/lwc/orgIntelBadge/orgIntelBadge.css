@@ -1,0 +1,54 @@
+:host {
+  display: inline-flex;
+}
+
+.oi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  color: var(--oi-text);
+  background: var(--oi-tint);
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--oi-mark);
+  flex-shrink: 0;
+}
+
+.tone-critical {
+  --oi-mark: var(--oi-critical);
+  --oi-tint: var(--oi-tint-critical);
+}
+.tone-serious {
+  --oi-mark: var(--oi-serious);
+  --oi-tint: var(--oi-tint-serious);
+}
+.tone-warning {
+  --oi-mark: var(--oi-warning);
+  --oi-tint: var(--oi-tint-warning);
+}
+.tone-good {
+  --oi-mark: var(--oi-good);
+  --oi-tint: var(--oi-tint-good);
+}
+.tone-low {
+  --oi-mark: var(--oi-low);
+  --oi-tint: var(--oi-tint-low);
+}
+.tone-info {
+  --oi-mark: var(--oi-accent);
+  --oi-tint: var(--oi-accent-soft);
+}
+.tone-neutral {
+  --oi-mark: var(--oi-neutral);
+  --oi-tint: var(--oi-tint-neutral);
+}

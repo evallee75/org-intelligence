@@ -1,0 +1,23 @@
+<template>
+  <section class={containerClass}>
+    <div class="illustration" aria-hidden="true">
+      <svg viewBox="0 0 120 120" width="120" height="120" focusable="false">
+        <circle cx="60" cy="60" r="56" class="ring-outer"></circle>
+        <circle cx="60" cy="60" r="40" class="ring-inner"></circle>
+      </svg>
+      <lightning-icon
+        icon-name={iconName}
+        size="medium"
+        class="illustration-icon"
+      ></lightning-icon>
+    </div>
+    <template lwc:if={isUnavailable}>
+      <span class="pill">Not available yet</span>
+    </template>
+    <h2 class="es-title">{title}</h2>
+    <p class="message">{message}</p>
+    <div class="actions">
+      <slot></slot>
+    </div>
+  </section>
+</template>

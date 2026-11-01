@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description
+  >Page principale d&apos;Org Intelligence (vue d&apos;ensemble, scanner, recommandations, Context Hub).</description>
+    <lwcComponent>orgIntelApp</lwcComponent>
+    <label>Org Intelligence</label>
+    <motif>Custom62: Chalkboard</motif>
+</CustomTab>

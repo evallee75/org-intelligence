@@ -1,0 +1,204 @@
+<template>
+  <div class="ms-setup">
+    <div class="ms-toolbar">
+      <div>
+        <h2 class="page-title">
+          Choose your modules
+          <lightning-helptext
+            content="The core (scanner, health score, automation map, storage, recommendations, reports and settings) is installed and stores nothing in the org: results stay in your browser. Add only the modules you need; only Recommendations (collaborative) and API Monitoring add custom objects."
+          ></lightning-helptext>
+        </h2>
+        <p class="muted" data-id="setup-progress">{progressText}</p>
+      </div>
+      <lightning-button-icon
+        icon-name="utility:refresh"
+        alternative-text="Refresh"
+        title="Refresh"
+        onclick={handleRefresh}
+      ></lightning-button-icon>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="ms-loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the modules"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The modules could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:else>
+      <template lwc:if={awaitingInstall}>
+        <p class="ms-notice" role="status">
+          Installation opened in a new tab. When it is done (Salesforce emails
+          you), come back: this page refreshes, then click "Give me access".
+        </p>
+      </template>
+
+      <!-- 1. Socle -->
+      <article class="ms-card step-row">
+        <span class={coreStepClass}>1</span>
+        <div class="step-main">
+          <h3 class="ms-card-title">
+            Core access
+            <lightning-helptext content={coreHelp}></lightning-helptext>
+          </h3>
+          <template lwc:if={core.askAdmin}>
+            <p class="muted">
+              Ask an administrator for the {core.permissionSet} permission set.
+            </p>
+          </template>
+        </div>
+        <div class="step-actions">
+          <c-org-intel-badge
+            label={core.statusLabel}
+            tone={core.statusTone}
+          ></c-org-intel-badge>
+          <template lwc:if={core.canGrant}>
+            <lightning-button
+              label="Give me admin access"
+              variant="brand"
+              data-key="core"
+              disabled={core.busy}
+              onclick={handleGrant}
+            ></lightning-button>
+          </template>
+        </div>
+      </article>
+
+      <!-- 2. Modules -->
+      <article class="ms-card">
+        <header class="ms-card-header">
+          <span class={modulesStepClass}>2</span>
+          <h3 class="ms-card-title">Optional modules</h3>
+          <span class="muted">{summary}</span>
+        </header>
+        <ul class="module-grid">
+          <template for:each={modules} for:item="module">
+            <li key={module.key} class={module.cardClass}>
+              <div class="module-header">
+                <p class="module-name">
+                  {module.label}
+                  <lightning-helptext
+                    content={module.objectsHelp}
+                  ></lightning-helptext>
+                </p>
+                <c-org-intel-badge
+                  label={module.statusLabel}
+                  tone={module.statusTone}
+                ></c-org-intel-badge>
+              </div>
+              <p class="module-description" title={module.description}>
+                {module.description}
+              </p>
+              <div class="module-actions">
+                <template lwc:if={module.canInstall}>
+                  <template lwc:if={module.hasPackage}>
+                    <lightning-button
+                      label="Install"
+                      variant="brand"
+                      icon-name="utility:download"
+                      data-key={module.key}
+                      onclick={handleInstall}
+                    ></lightning-button>
+                  </template>
+                  <template lwc:else>
+                    <lightning-button
+                      label="How to install"
+                      icon-name="utility:new_window"
+                      data-key={module.key}
+                      onclick={handleInstall}
+                    ></lightning-button>
+                  </template>
+                </template>
+                <template lwc:if={module.blockedText}>
+                  <p class="muted">{module.blockedText}</p>
+                </template>
+                <template lwc:if={module.canGrant}>
+                  <lightning-button
+                    label="Give me access"
+                    variant="brand"
+                    data-key={module.key}
+                    disabled={module.busy}
+                    onclick={handleGrant}
+                  ></lightning-button>
+                </template>
+                <template lwc:if={module.askAdmin}>
+                  <p class="muted">
+                    Ask an administrator for {module.permissionSet}.
+                  </p>
+                </template>
+                <template lwc:if={module.canOpen}>
+                  <lightning-button
+                    label="Open"
+                    data-section={module.section}
+                    onclick={handleOpen}
+                  ></lightning-button>
+                </template>
+              </div>
+            </li>
+          </template>
+        </ul>
+      </article>
+
+      <!-- 3. Tooling API, puis premier scan -->
+      <article class="ms-card step-row">
+        <span class={toolingStepClass}>3</span>
+        <div class="step-main">
+          <h3 class="ms-card-title">
+            Connect the Tooling API
+            <lightning-helptext
+              content="Gives the scanner access to code coverage, flow logic, validation rules and dependencies (without it, the scanner works in degraded mode). The assistant creates it in about a minute; then each administrator clicks “Allow Access” once."
+            ></lightning-helptext>
+          </h3>
+          <template lwc:if={toolingConnected}>
+            <p class="muted">Connected</p>
+          </template>
+          <template lwc:else>
+            <p class="muted">Optional · about a minute</p>
+          </template>
+        </div>
+        <div class="step-actions">
+          <lightning-button
+            label={toolingButtonLabel}
+            variant="brand"
+            icon-name="utility:magicwand"
+            onclick={handleToolingSetup}
+          ></lightning-button>
+          <lightning-button
+            label="Check it in Settings"
+            onclick={handleOpenSettings}
+          ></lightning-button>
+        </div>
+      </article>
+
+      <article class="ms-card step-row">
+        <span class={scanStepClass}>4</span>
+        <div class="step-main">
+          <h3 class="ms-card-title">
+            Run your first scan
+            <lightning-helptext
+              content="A few minutes in this tab: keep it open (you can switch sections). It builds the inventory, the findings and the health score, stored in this browser."
+            ></lightning-helptext>
+          </h3>
+          <p class="muted">A few minutes in this tab: keep it open</p>
+        </div>
+        <div class="step-actions">
+          <c-org-intel-scan-control
+            launch-label={scanLaunchLabel}
+            show-data
+            onscanfinished={handleScanFinished}
+            onnavigate={handleScanNavigate}
+          ></c-org-intel-scan-control>
+        </div>
+      </article>
+    </template>
+  </div>
+</template>

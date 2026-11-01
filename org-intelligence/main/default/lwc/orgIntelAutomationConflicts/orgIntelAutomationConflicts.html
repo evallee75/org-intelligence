@@ -1,0 +1,156 @@
+<template>
+  <article class="card">
+    <!-- En-tête et filtres sur une seule ligne -->
+    <header class="head">
+      <h3 class="card-title">
+        Conflicts across the org
+        <lightning-helptext
+          content="Automations that overwrite the same field, run in no guaranteed order, save records again or loop between objects. Click a type to filter, expand a row for the details and how to fix it."
+        ></lightning-helptext>
+      </h3>
+      <template lwc:if={hasConflicts}>
+        <div class="filters">
+          <lightning-input
+            type="search"
+            label="Search"
+            variant="label-hidden"
+            placeholder="Search a field, an automation…"
+            value={search}
+            onchange={handleSearch}
+            class="filter-search"
+          ></lightning-input>
+          <lightning-combobox
+            label="Object"
+            variant="label-hidden"
+            options={objectOptions}
+            value={objectFilter}
+            onchange={handleObject}
+            class="filter-object"
+          ></lightning-combobox>
+          <span class="muted result">{resultText}</span>
+          <c-org-intel-export-menu
+            compact
+            disabled={noRows}
+            alternative-text="Export the conflicts shown"
+            onexport={handleExport}
+          ></c-org-intel-export-menu>
+        </div>
+      </template>
+    </header>
+
+    <template lwc:if={hasConflicts}>
+      <div class="chips" role="group" aria-label="Conflict types">
+        <template for:each={typeChips} for:item="chip">
+          <button
+            key={chip.key}
+            type="button"
+            class={chip.className}
+            data-value={chip.value}
+            aria-pressed={chip.pressed}
+            title={chip.description}
+            onclick={handleType}
+          >
+            <span class="chip-count">{chip.count}</span>
+            <span class="chip-label">{chip.label}</span>
+          </button>
+        </template>
+      </div>
+
+      <template lwc:if={currentAdvice}>
+        <p class="advice-banner">
+          <lightning-icon
+            icon-name="utility:light_bulb"
+            size="x-small"
+            class="advice-icon"
+          ></lightning-icon>
+          {currentAdvice}
+        </p>
+      </template>
+
+      <template lwc:if={hasRows}>
+        <ul class="rows">
+          <template for:each={rows} for:item="row">
+            <li key={row.key} class={row.className}>
+              <div class="row-line">
+                <button
+                  type="button"
+                  class="row-toggle"
+                  data-key={row.key}
+                  aria-expanded={row.expandedText}
+                  title={row.toggleLabel}
+                  onclick={handleToggleRow}
+                >
+                  <lightning-icon
+                    icon-name={row.toggleIcon}
+                    size="xx-small"
+                    alternative-text={row.toggleLabel}
+                  ></lightning-icon>
+                </button>
+                <c-org-intel-badge
+                  label={row.label}
+                  tone={row.tone}
+                  title={row.severity}
+                ></c-org-intel-badge>
+                <button
+                  type="button"
+                  class="object-link"
+                  data-object={row.objectName}
+                  title="Open the order of execution of this object"
+                  onclick={handleOpenObject}
+                >
+                  {row.objectsText}
+                </button>
+                <span class="title" title={row.detail}>{row.title}</span>
+                <template lwc:if={row.hasAutomations}>
+                  <span class="chain">
+                    <template for:each={row.automations} for:item="automation">
+                      <span key={automation.key} class="chain-item">
+                        <template lwc:if={automation.separator}>
+                          <span class="separator">{automation.separator}</span>
+                        </template>
+                        <button
+                          type="button"
+                          class="automation-link"
+                          data-id={automation.id}
+                          data-object={row.objectName}
+                          onclick={handleOpenAutomation}
+                        >
+                          {automation.name}
+                        </button>
+                      </span>
+                    </template>
+                  </span>
+                </template>
+              </div>
+              <template lwc:if={row.expanded}>
+                <div class="row-details">
+                  <span class="severity">{row.severity}</span>
+                  <template lwc:if={row.detail}>
+                    <span class="muted">{row.detail}</span>
+                  </template>
+                  <div class="row-advice">
+                    <span class="advice-label">How to fix</span>
+                    <span>{row.advice}</span>
+                  </div>
+                </div>
+              </template>
+            </li>
+          </template>
+        </ul>
+      </template>
+      <template lwc:else>
+        <p class="muted empty">No match.</p>
+      </template>
+    </template>
+    <template lwc:else>
+      <div class="all-good">
+        <lightning-icon
+          icon-name="utility:success"
+          size="x-small"
+          class="all-good-icon"
+        ></lightning-icon>
+        <span class="all-good-title">No conflict detected</span>
+      </div>
+    </template>
+  </article>
+</template>

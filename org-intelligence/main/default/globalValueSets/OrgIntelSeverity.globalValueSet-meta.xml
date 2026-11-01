@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customValue>
+        <fullName>Critical</fullName>
+        <default>false</default>
+        <label>Critical</label>
+    </customValue>
+    <customValue>
+        <fullName>High</fullName>
+        <default>false</default>
+        <label>High</label>
+    </customValue>
+    <customValue>
+        <fullName>Medium</fullName>
+        <default>false</default>
+        <label>Medium</label>
+    </customValue>
+    <customValue>
+        <fullName>Low</fullName>
+        <default>false</default>
+        <label>Low</label>
+    </customValue>
+    <customValue>
+        <fullName>Info</fullName>
+        <default>false</default>
+        <label>Info</label>
+    </customValue>
+    <description
+  >Gravité des constats et recommandations, de la plus forte à la plus faible.</description>
+    <masterLabel>Org Intelligence - Severity</masterLabel>
+    <sorted>false</sorted>
+</GlobalValueSet>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Org Intelligence - utilisateur : consulte les scans et constats, traite les recommandations
+  (statut, motif de décision, assignation, commentaires Chatter) et exporte le contexte.
+  Ne peut ni lancer de scan ni modifier le contenu technique d'une recommandation.
+-->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Org Intelligence - User</label>
+    <description
+  >Consultation des scans, traitement collaboratif des recommandations et export de contexte Org Intelligence.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <applicationVisibilities>
+        <application>Org_Intelligence</application>
+        <visible>true</visible>
+    </applicationVisibilities>
+    <classAccesses>
+        <apexClass>OrgIntelModuleController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>OrgIntelligenceController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>OrgIntelligence_User</name>
+    </customPermissions>
+    <customSettingAccesses>
+        <enabled>true</enabled>
+        <name>OrgIntelRuleOverride__c</name>
+    </customSettingAccesses>
+    <customSettingAccesses>
+        <enabled>true</enabled>
+        <name>OrgIntelSettings__c</name>
+    </customSettingAccesses>
+    <tabSettings>
+        <tab>Org_Intelligence</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+</PermissionSet>

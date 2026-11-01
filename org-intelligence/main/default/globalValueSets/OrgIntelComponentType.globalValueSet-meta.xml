@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customValue>
+        <fullName>ApexClass</fullName>
+        <default>false</default>
+        <label>Apex Class</label>
+    </customValue>
+    <customValue>
+        <fullName>ApexTrigger</fullName>
+        <default>false</default>
+        <label>Apex Trigger</label>
+    </customValue>
+    <customValue>
+        <fullName>Flow</fullName>
+        <default>false</default>
+        <label>Flow</label>
+    </customValue>
+    <customValue>
+        <fullName>CustomObject</fullName>
+        <default>false</default>
+        <label>Object</label>
+    </customValue>
+    <customValue>
+        <fullName>CustomField</fullName>
+        <default>false</default>
+        <label>Custom Field</label>
+    </customValue>
+    <customValue>
+        <fullName>ValidationRule</fullName>
+        <default>false</default>
+        <label>Validation Rule</label>
+    </customValue>
+    <description>Types de composants inventoriés par le scanner.</description>
+    <masterLabel>Org Intelligence - Component Type</masterLabel>
+    <sorted>false</sorted>
+</GlobalValueSet>

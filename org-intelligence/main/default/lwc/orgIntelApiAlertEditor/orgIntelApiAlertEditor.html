@@ -1,0 +1,375 @@
+<template>
+  <lightning-modal-header label={headerLabel}>
+    <p class="header-sub">
+      Get an email, a task or a notification when API calls go wrong.
+    </p>
+  </lightning-modal-header>
+  <lightning-modal-body>
+    <div class="editor">
+      <!-- Modèles -->
+      <template lwc:if={isNew}>
+        <section class="block" aria-label="Templates">
+          <h3 class="block-title">Start from a template</h3>
+          <div class="templates">
+            <template for:each={templates} for:item="template">
+              <button
+                key={template.key}
+                type="button"
+                class={template.className}
+                data-key={template.key}
+                onclick={handleTemplate}
+              >
+                <span class="template-icon">
+                  <lightning-icon
+                    icon-name={template.icon}
+                    size="x-small"
+                  ></lightning-icon>
+                </span>
+                <span class="template-text">
+                  <span class="template-title">{template.title}</span>
+                  <span class="template-description"
+                    >{template.description}</span
+                  >
+                </span>
+              </button>
+            </template>
+          </div>
+        </section>
+      </template>
+
+      <!-- Condition -->
+      <section class="block block-condition" aria-label="Condition">
+        <h3 class="block-title">Condition</h3>
+        <div class="sentence-builder">
+          <span class="word">When</span>
+          <lightning-combobox
+            class="inline inline-metric"
+            label="Metric"
+            variant="label-hidden"
+            options={metricOptions}
+            value={draft.metric}
+            data-field="metric"
+            onchange={handleField}
+          ></lightning-combobox>
+          <span class="word">on</span>
+          <lightning-combobox
+            class="inline inline-system"
+            label="System"
+            variant="label-hidden"
+            options={systemOptions}
+            value={draft.systemName}
+            data-field="systemName"
+            onchange={handleField}
+          ></lightning-combobox>
+          <span class="word">is</span>
+          <lightning-combobox
+            class="inline inline-comparator"
+            label="Comparator"
+            variant="label-hidden"
+            options={comparatorOptions}
+            value={draft.comparator}
+            data-field="comparator"
+            onchange={handleField}
+          ></lightning-combobox>
+          <lightning-input
+            class="inline inline-threshold"
+            type="number"
+            label="Threshold"
+            variant="label-hidden"
+            min="0"
+            step={thresholdStep}
+            value={draft.threshold}
+            required
+            message-when-value-missing="Set a threshold"
+            data-field="threshold"
+            onchange={handleField}
+          ></lightning-input>
+          <span class="word word-unit">{thresholdUnit}</span>
+          <span class="word">within</span>
+          <lightning-combobox
+            class="inline inline-window"
+            label="Window"
+            variant="label-hidden"
+            options={windowOptions}
+            value={windowValue}
+            data-field="windowMinutes"
+            onchange={handleField}
+          ></lightning-combobox>
+        </div>
+        <p class="hint">{metricHelp}</p>
+
+        <template lwc:if={isSlowCalls}>
+          <div class="extra">
+            <lightning-input
+              type="number"
+              label="A call is slow above (ms)"
+              min="1"
+              value={draft.slowThresholdMs}
+              data-field="slowThresholdMs"
+              onchange={handleField}
+            ></lightning-input>
+          </div>
+        </template>
+        <template lwc:if={isErrorRate}>
+          <div class="extra">
+            <lightning-input
+              type="number"
+              label="Only when the window has at least (calls)"
+              min="1"
+              value={draft.minimumCalls}
+              data-field="minimumCalls"
+              onchange={handleField}
+            ></lightning-input>
+          </div>
+        </template>
+
+        <button
+          type="button"
+          class="toggle-filters"
+          onclick={handleToggleFilters}
+        >
+          <lightning-icon
+            icon-name={filtersIcon}
+            size="xx-small"
+          ></lightning-icon>
+          <span>{filtersLabel}</span>
+        </button>
+        <template lwc:if={showFilters}>
+          <div class="filters">
+            <div class="filter-status">
+              <lightning-input
+                label="HTTP status"
+                placeholder="401, 403, 5xx, 0 = no response"
+                value={draft.statusCodes}
+                data-field="statusCodes"
+                onchange={handleField}
+              ></lightning-input>
+              <div class="chips" role="group" aria-label="Status shortcuts">
+                <template for:each={statusShortcuts} for:item="shortcut">
+                  <button
+                    key={shortcut.value}
+                    type="button"
+                    class={shortcut.className}
+                    aria-pressed={shortcut.pressed}
+                    data-value={shortcut.value}
+                    onclick={handleStatusShortcut}
+                  >
+                    {shortcut.label}
+                  </button>
+                </template>
+              </div>
+            </div>
+            <lightning-input
+              label="Operation contains"
+              placeholder="e.g. POST /orders"
+              value={draft.operationContains}
+              data-field="operationContains"
+              onchange={handleField}
+            ></lightning-input>
+            <lightning-input
+              label="Error message contains"
+              placeholder="e.g. expired access token"
+              value={draft.errorContains}
+              data-field="errorContains"
+              onchange={handleField}
+            ></lightning-input>
+          </div>
+        </template>
+
+        <p class="sentence" aria-live="polite">{sentence}</p>
+      </section>
+
+      <!-- Aperçu -->
+      <section class="block block-preview" aria-label="Preview">
+        <div class="preview-head">
+          <h3 class="block-title">Preview on the last 7 days</h3>
+          <template lwc:if={isPreviewing}>
+            <span class="computing">
+              <lightning-spinner
+                alternative-text="Computing the preview"
+                size="xx-small"
+                variant="brand"
+              ></lightning-spinner>
+              Computing…
+            </span>
+          </template>
+        </div>
+        <template lwc:if={previewError}>
+          <p class="error">{previewError}</p>
+        </template>
+        <template lwc:if={hasPreview}>
+          <div class={previewTone}>
+            <span class="verdict-title">{previewHeadline}</span>
+            <span class="verdict-detail">{previewDetail}</span>
+          </div>
+          <c-org-intel-api-alert-chart
+            variant="full"
+            values={preview.values}
+            times={preview.times}
+            fire-times={preview.fireTimes}
+            threshold={draft.threshold}
+            comparator={draft.comparator}
+            label="Metric over the last 7 days, with the threshold"
+          ></c-org-intel-api-alert-chart>
+          <ul class="legend">
+            <li>
+              <span class="swatch swatch-line"></span>value per 15 minutes
+            </li>
+            <li><span class="swatch swatch-threshold"></span>threshold</li>
+            <li><span class="swatch swatch-hot"></span>threshold reached</li>
+            <li>
+              <span class="swatch swatch-fire"></span>alert sent (with cooldown)
+            </li>
+          </ul>
+          <p class={nowClass}>{nowText}</p>
+          <template lwc:if={advice}>
+            <p class="advice">
+              <lightning-icon
+                icon-name="utility:light_bulb"
+                size="xx-small"
+              ></lightning-icon>
+              <span>{advice}</span>
+            </p>
+          </template>
+          <template lwc:if={hasTopErrors}>
+            <h4 class="sub-title">Matching error types</h4>
+            <ul class="top-errors">
+              <template for:each={topErrors} for:item="type">
+                <li key={type.key}>
+                  <span class="type-count">{type.countText}</span>
+                  <span class="type-status">{type.statusText}</span>
+                  <span class="type-pattern" title={type.sampleMessage}
+                    >{type.pattern}</span
+                  >
+                  <template lwc:if={type.containsHint}>
+                    <button
+                      type="button"
+                      class="link"
+                      data-hint={type.containsHint}
+                      onclick={handleUseHint}
+                      title="Only count this error message"
+                    >
+                      Only this one
+                    </button>
+                  </template>
+                </li>
+              </template>
+            </ul>
+          </template>
+        </template>
+      </section>
+
+      <!-- Notifications -->
+      <section class="block" aria-label="Notify">
+        <h3 class="block-title">Notify by</h3>
+        <div class="channels" role="group" aria-label="Channels">
+          <template for:each={channels} for:item="channel">
+            <button
+              key={channel.value}
+              type="button"
+              class={channel.className}
+              aria-pressed={channel.pressed}
+              data-value={channel.value}
+              title={channel.help}
+              onclick={handleChannel}
+            >
+              <lightning-icon
+                icon-name={channel.icon}
+                size="x-small"
+              ></lightning-icon>
+              <span>{channel.label}</span>
+            </button>
+          </template>
+        </div>
+        <div class="notify-grid">
+          <template lwc:if={hasEmail}>
+            <div class="recipients">
+              <lightning-textarea
+                label="Email recipients"
+                placeholder="ops@example.com, me@example.com"
+                value={draft.recipients}
+                required
+                message-when-value-missing="Add at least one recipient"
+                data-field="recipients"
+                onchange={handleField}
+              ></lightning-textarea>
+              <button type="button" class="link" onclick={handleAddMe}>
+                + Add me
+              </button>
+            </div>
+          </template>
+          <template lwc:if={needsOwner}>
+            <lightning-record-picker
+              label="Task and notification owner"
+              placeholder="Search a user…"
+              object-api-name="User"
+              value={draft.taskOwnerId}
+              onchange={handleOwner}
+            ></lightning-record-picker>
+          </template>
+          <lightning-combobox
+            label="Severity"
+            options={severityOptions}
+            value={draft.severity}
+            data-field="severity"
+            onchange={handleField}
+          ></lightning-combobox>
+          <lightning-combobox
+            label="Do not repeat the alert for"
+            options={cooldownOptions}
+            value={cooldownValue}
+            data-field="cooldownMinutes"
+            onchange={handleField}
+            field-level-help="Cooldown: once fired, the rule stays quiet during this delay even if the threshold is still reached."
+          ></lightning-combobox>
+        </div>
+      </section>
+
+      <!-- Identité -->
+      <section class="block" aria-label="Name">
+        <div class="identity">
+          <lightning-input
+            label="Rule name"
+            value={draft.name}
+            max-length="80"
+            required
+            onchange={handleName}
+            class="identity-name"
+          ></lightning-input>
+          <lightning-input
+            type="toggle"
+            label="Active"
+            checked={draft.active}
+            message-toggle-active="On"
+            message-toggle-inactive="Off"
+            onchange={handleActive}
+          ></lightning-input>
+        </div>
+        <lightning-input
+          label="Description (optional)"
+          value={draft.description}
+          max-length="255"
+          onchange={handleDescription}
+        ></lightning-input>
+      </section>
+
+      <template lwc:if={saveError}>
+        <p class="error" role="alert">{saveError}</p>
+      </template>
+    </div>
+  </lightning-modal-body>
+  <lightning-modal-footer>
+    <lightning-button
+      label="Cancel"
+      onclick={handleCancel}
+      disabled={isSaving}
+    ></lightning-button>
+    <lightning-button
+      class="save"
+      variant="brand"
+      label={saveLabel}
+      onclick={handleSave}
+      disabled={isSaving}
+    ></lightning-button>
+  </lightning-modal-footer>
+</template>

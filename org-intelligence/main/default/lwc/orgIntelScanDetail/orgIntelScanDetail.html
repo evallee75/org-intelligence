@@ -1,0 +1,551 @@
+<template>
+  <div class="sd-detail">
+    <!-- En-tête sur une ligne : retour, nom, statut, métadonnées (périmètre en aide), rafraîchir -->
+    <div class="sd-toolbar">
+      <lightning-button
+        variant="base"
+        label="All scans"
+        icon-name="utility:back"
+        onclick={handleBack}
+        data-id="back"
+      ></lightning-button>
+      <template lwc:if={summary}>
+        <h2 class="page-title" data-id="scan-name">
+          {summary.name}
+          <c-org-intel-badge
+            label={summary.status}
+            tone={statusTone}
+            class="title-badge"
+          ></c-org-intel-badge>
+        </h2>
+        <span class="muted sd-meta">
+          <lightning-formatted-date-time
+            value={summary.startedAt}
+            year="numeric"
+            month="short"
+            day="numeric"
+            hour="2-digit"
+            minute="2-digit"
+          ></lightning-formatted-date-time>
+          · {durationText}
+          <lightning-helptext content={scopeHelp}></lightning-helptext>
+          <c-org-intel-browser-badge></c-org-intel-browser-badge>
+        </span>
+      </template>
+      <div class="sd-toolbar-actions">
+        <c-org-intel-scan-control
+          hide-launcher
+          hide-history
+          show-data
+          scan-to-save={scanToSave}
+          onscanfinished={handleScanReplaced}
+          onnavigate={handleControlNavigate}
+        ></c-org-intel-scan-control>
+      </div>
+      <lightning-button-icon
+        class="sd-toolbar-refresh"
+        icon-name="utility:refresh"
+        alternative-text="Refresh the scan"
+        title="Refresh"
+        onclick={handleRefresh}
+      ></lightning-button-icon>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="sd-loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the scan"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The scan could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+
+    <template lwc:elseif={notFound}>
+      <c-org-intel-empty-state
+        title="This scan is not in this browser"
+        message="Scans stay in the browser that ran them. Ask for the scan file, or open the list of your scans."
+        icon-name="utility:search"
+        data-id="scan-not-found"
+      >
+        <div class="sd-empty-actions">
+          <lightning-button
+            label="All scans"
+            icon-name="utility:list"
+            onclick={handleBack}
+          ></lightning-button>
+          <c-org-intel-scan-control
+            hide-launcher
+            hide-history
+            show-data
+            onscanfinished={handleScanReplaced}
+            onnavigate={handleControlNavigate}
+          ></c-org-intel-scan-control>
+        </div>
+      </c-org-intel-empty-state>
+    </template>
+
+    <template lwc:else>
+      <template lwc:if={summaryOnly}>
+        <div class="sd-banner sd-banner-info" role="status" data-id="summary-only">
+          <lightning-icon
+            icon-name="utility:info"
+            size="xx-small"
+          ></lightning-icon>
+          <span>The details of this scan are no longer kept: only its summary.</span>
+          <lightning-helptext
+            content="This browser keeps the details (findings, components, log) of the latest scan only. Older scans keep their score and counts. If you saved this scan to a file, open it with the Data menu."
+          ></lightning-helptext>
+        </div>
+      </template>
+
+      <template lwc:if={viewOnly}>
+        <div class="sd-banner sd-banner-info" role="status" data-id="view-only">
+          <lightning-icon
+            icon-name="utility:preview"
+            size="xx-small"
+          ></lightning-icon>
+          <span>Viewing a scan file: nothing is stored in this browser.</span>
+          <lightning-helptext
+            content="The scan is shown in this tab only. To keep it, choose Data › Open a scan file again and replace the latest scan."
+          ></lightning-helptext>
+        </div>
+      </template>
+
+      <template lwc:if={isDegraded}>
+        <div class="sd-banner sd-banner-warning" role="status" data-id="degraded">
+          <lightning-icon
+            icon-name="utility:warning"
+            size="xx-small"
+          ></lightning-icon>
+          <span>Degraded mode: the Tooling API was not available.</span>
+          <lightning-helptext
+            content="Validation rules, dependencies and code coverage were not collected. See the collection log."
+          ></lightning-helptext>
+        </div>
+      </template>
+
+      <template lwc:if={inventoryBanner}>
+        <div class="sd-banner sd-banner-warning" role="status" data-id="inventory">
+          <lightning-icon
+            icon-name="utility:warning"
+            size="xx-small"
+          ></lightning-icon>
+          <span>{inventoryBanner}</span>
+          <lightning-helptext
+            content="Findings and counters are kept. Automation, Objects and Storage need the inventory: free some browser storage (Settings › Browser data) and run the scan again."
+          ></lightning-helptext>
+        </div>
+      </template>
+
+      <template lwc:if={recommendationsError}>
+        <div class="sd-banner sd-banner-warning" role="status" data-id="rec-error">
+          <lightning-icon
+            icon-name="utility:warning"
+            size="xx-small"
+          ></lightning-icon>
+          <span>Recommendations were not updated by this scan.</span>
+          <lightning-helptext content={recommendationsError}></lightning-helptext>
+        </div>
+      </template>
+
+      <!-- Indicateurs : cliquables vers l'onglet correspondant -->
+      <section class="kpis" aria-label="Scan indicators">
+        <div class="kpi">
+          <span class="kpi-label">Health score</span>
+          <span class="kpi-value"
+            >{scoreValue}<span class="kpi-unit">/ 100</span></span
+          >
+          <span class="kpi-caption">{band.label}</span>
+        </div>
+        <div
+          class={kpiLinkClass}
+          role={kpiRole}
+          tabindex={kpiTabIndex}
+          data-tab="findings"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Findings</span>
+          <span class="kpi-value">{findingValue}</span>
+          <span class="kpi-caption">{findingCaption}</span>
+        </div>
+        <div
+          class={kpiLinkClass}
+          role={kpiRole}
+          tabindex={kpiTabIndex}
+          data-tab="components"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Components</span>
+          <span class="kpi-value">{componentValue}</span>
+          <span class="kpi-caption">Discovered by this scan</span>
+        </div>
+        <div
+          class={kpiLinkClass}
+          role={kpiRole}
+          tabindex={kpiTabIndex}
+          data-tab="log"
+          data-filter="issues"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Collection issues</span>
+          <span class="kpi-value">{issueValue}</span>
+          <span class="kpi-caption">{issueCaption}</span>
+        </div>
+      </section>
+
+      <template lwc:if={hasCompareOptions}>
+        <div class="compare" data-id="comparison">
+          <span class="muted">Compared with</span>
+          <lightning-combobox
+            class="compare-select"
+            label="Compare with"
+            variant="label-hidden"
+            options={compareOptions}
+            value={compareScanId}
+            placeholder="Choose a scan"
+            dropdown-alignment="auto"
+            onchange={handleCompareChange}
+          ></lightning-combobox>
+          <lightning-helptext
+            content="The last 10 completed scans of this browser keep their finding list, to compare them with this one."
+          ></lightning-helptext>
+          <template lwc:if={hasComparison}>
+            <button
+              class="compare-link compare-value sd-new"
+              title="Show new findings only"
+              onclick={handleShowNew}
+            >
+              +{comparison.newFindingCount} new
+            </button>
+            <span class="compare-value sd-gone"
+              >−{comparison.disappearedCount} no longer detected</span
+            >
+            <template lwc:if={hasDisappeared}>
+              <button
+                class="compare-link"
+                aria-expanded={disappearedExpanded}
+                onclick={handleToggleDisappeared}
+              >
+                <lightning-icon
+                  icon-name={disappearedIcon}
+                  size="xx-small"
+                  alternative-text={disappearedToggleLabel}
+                ></lightning-icon>
+                {disappearedToggleLabel}
+              </button>
+              <template lwc:if={disappearedExpanded}>
+                <ul class="compare-list">
+                  <template
+                    for:each={comparison.disappeared}
+                    for:item="item"
+                  >
+                    <li key={item.key}>{item.label}</li>
+                  </template>
+                </ul>
+              </template>
+            </template>
+          </template>
+        </div>
+      </template>
+
+      <template lwc:if={scan}>
+        <article class="sd-card">
+          <lightning-tabset variant="scoped" active-tab-value={activeTab}>
+            <!-- Constats -->
+            <lightning-tab
+              label={findingTabLabel}
+              value="findings"
+              onactive={handleTabActive}
+            >
+              <template lwc:if={findingsError}>
+                <c-org-intel-error-panel
+                  title="The findings could not be loaded"
+                  error={findingsError}
+                ></c-org-intel-error-panel>
+              </template>
+              <template lwc:elseif={hasFindings}>
+                <div class="sd-filters">
+                  <lightning-input
+                    type="search"
+                    label="Search findings"
+                    variant="label-hidden"
+                    placeholder="Search a finding, component or rule…"
+                    value={findingSearch}
+                    onchange={handleFindingSearch}
+                    class="filter-search"
+                  ></lightning-input>
+                  <lightning-combobox
+                    label="Severity"
+                    variant="label-hidden"
+                    options={severityOptions}
+                    value={severityFilter}
+                    onchange={handleSeverityFilter}
+                    data-id="severity-filter"
+                    class="filter-combo"
+                  ></lightning-combobox>
+                  <lightning-combobox
+                    label="Category"
+                    variant="label-hidden"
+                    options={categoryOptions}
+                    value={categoryFilter}
+                    onchange={handleCategoryFilter}
+                    class="filter-combo"
+                  ></lightning-combobox>
+                  <lightning-combobox
+                    label="Component type"
+                    variant="label-hidden"
+                    options={typeOptions}
+                    value={typeFilter}
+                    onchange={handleTypeFilter}
+                    class="filter-combo"
+                  ></lightning-combobox>
+                  <lightning-input
+                    type="toggle"
+                    label="New only"
+                    checked={newOnly}
+                    onchange={handleNewOnly}
+                    message-toggle-active=""
+                    message-toggle-inactive=""
+                  ></lightning-input>
+                  <template lwc:if={hasFindingFilters}>
+                    <lightning-button
+                      variant="base"
+                      label="Reset"
+                      onclick={handleResetFilters}
+                    ></lightning-button>
+                  </template>
+                  <span class="muted filter-count" data-id="finding-count"
+                    >{findingCountText}</span
+                  >
+                  <c-org-intel-export-menu
+                    disabled={noFilteredFindings}
+                    alternative-text="Export the findings shown"
+                    onexport={handleExportFindings}
+                  ></c-org-intel-export-menu>
+                </div>
+                <template lwc:if={hasFilteredFindings}>
+                  <lightning-datatable
+                    key-field="id"
+                    data={filteredFindings}
+                    columns={findingColumns}
+                    hide-checkbox-column
+                    sorted-by={findingSort.fieldName}
+                    sorted-direction={findingSort.direction}
+                    onsort={handleFindingSort}
+                    onrowaction={handleFindingAction}
+                    data-id="findings"
+                  ></lightning-datatable>
+                  <template lwc:if={selectedFinding}>
+                    <section class="finding-detail" data-id="finding-detail">
+                      <header class="finding-head">
+                        <lightning-icon
+                          icon-name={selectedFinding.severityIcon}
+                          size="xx-small"
+                          alternative-text={selectedFinding.severity}
+                        ></lightning-icon>
+                        <span class="finding-title"
+                          >{selectedFinding.title}</span
+                        >
+                        <span class="muted"
+                          >{selectedFinding.findingTooltip}</span
+                        >
+                        <lightning-button-icon
+                          class="finding-close"
+                          icon-name="utility:close"
+                          variant="bare"
+                          alternative-text="Close the finding"
+                          onclick={handleCloseFinding}
+                        ></lightning-button-icon>
+                      </header>
+                      <template lwc:if={selectedFinding.description}>
+                        <p class="finding-text">
+                          {selectedFinding.description}
+                        </p>
+                      </template>
+                      <template lwc:if={selectedFinding.evidence}>
+                        <p class="finding-text muted">
+                          {selectedFinding.evidence}
+                        </p>
+                      </template>
+                      <template lwc:if={selectedFinding.affectedComponents}>
+                        <pre class="finding-affected">
+{selectedFinding.affectedComponents}</pre>
+                      </template>
+                    </section>
+                  </template>
+                </template>
+                <template lwc:else>
+                  <p class="sd-card-empty">No finding matches these filters.</p>
+                </template>
+              </template>
+              <template lwc:elseif={findingsLoaded}>
+                <p class="sd-card-empty" data-id="no-findings">
+                  No finding: no enabled rule matched.
+                </p>
+              </template>
+              <template lwc:else>
+                <div class="sd-loading sd-small" role="status">
+                  <lightning-spinner
+                    alternative-text="Loading findings"
+                    size="small"
+                  ></lightning-spinner>
+                </div>
+              </template>
+            </lightning-tab>
+
+            <!-- Composants -->
+            <lightning-tab
+              label={componentTabLabel}
+              value="components"
+              onactive={handleComponentsActive}
+            >
+              <template lwc:if={isPurged}>
+                <p class="sd-card-empty">
+                  Component inventory not kept: browser storage was full
+                  (counters and findings are kept).
+                </p>
+              </template>
+              <template lwc:else>
+                <div class="sd-filters">
+                  <lightning-input
+                    type="search"
+                    label="Search components"
+                    variant="label-hidden"
+                    placeholder="Search by API name or parent…"
+                    value={componentSearch}
+                    onchange={handleComponentSearch}
+                    class="filter-search"
+                  ></lightning-input>
+                  <lightning-combobox
+                    label="Component type"
+                    variant="label-hidden"
+                    options={typeOptions}
+                    value={componentType}
+                    onchange={handleComponentType}
+                    class="filter-combo"
+                  ></lightning-combobox>
+                  <span class="muted filter-count">
+                    {componentCountText}
+                    <template lwc:if={isComponentListTruncated}>
+                      <lightning-helptext
+                        content="Only the first components are loaded. Refine the search or the type to see the others."
+                      ></lightning-helptext>
+                    </template>
+                  </span>
+                  <c-org-intel-export-menu
+                    disabled={noComponents}
+                    alternative-text="Export the components shown"
+                    onexport={handleExportComponents}
+                  ></c-org-intel-export-menu>
+                </div>
+                <template lwc:if={componentsError}>
+                  <c-org-intel-error-panel
+                    title="The components could not be loaded"
+                    error={componentsError}
+                  ></c-org-intel-error-panel>
+                </template>
+                <template lwc:elseif={componentsLoading}>
+                  <div class="sd-loading sd-small" role="status">
+                    <lightning-spinner
+                      alternative-text="Loading components"
+                      size="small"
+                    ></lightning-spinner>
+                  </div>
+                </template>
+                <template lwc:elseif={hasComponents}>
+                  <lightning-datatable
+                    key-field="id"
+                    data={componentRows}
+                    columns={componentColumns}
+                    hide-checkbox-column
+                    sorted-by={componentSort.fieldName}
+                    sorted-direction={componentSort.direction}
+                    onsort={handleComponentSort}
+                  ></lightning-datatable>
+                </template>
+                <template lwc:else>
+                  <p class="sd-card-empty">No component matches this search.</p>
+                </template>
+              </template>
+            </lightning-tab>
+
+            <!-- Journal : une ligne par entrée, message long dépliable -->
+            <lightning-tab
+              label={logTabLabel}
+              value="log"
+              onactive={handleTabActive}
+            >
+              <template lwc:if={hasLog}>
+                <div class="sd-filters">
+                  <lightning-input
+                    type="toggle"
+                    label="Issues only"
+                    checked={logIssuesOnly}
+                    onchange={handleLogIssuesOnly}
+                    message-toggle-active=""
+                    message-toggle-inactive=""
+                    data-id="log-issues-only"
+                  ></lightning-input>
+                  <span class="muted filter-count">{logCountText}</span>
+                  <c-org-intel-export-menu
+                    alternative-text="Export the scan log"
+                    onexport={handleExportLog}
+                  ></c-org-intel-export-menu>
+                </div>
+                <template lwc:if={hasVisibleLog}>
+                  <ul class="sd-log" data-id="log">
+                    <template for:each={visibleLogRows} for:item="row">
+                      <li key={row.key} class={row.rowClass}>
+                        <lightning-icon
+                          icon-name={row.icon}
+                          variant={row.variant}
+                          size="xx-small"
+                          alternative-text={row.levelLabel}
+                        ></lightning-icon>
+                        <span class="log-step">{row.step}</span>
+                        <span class={row.messageClass}>{row.message}</span>
+                        <template lwc:if={row.isLong}>
+                          <button
+                            class="log-toggle"
+                            aria-expanded={row.expanded}
+                            title={row.toggleLabel}
+                            data-key={row.key}
+                            onclick={handleLogToggle}
+                          >
+                            <lightning-icon
+                              icon-name={row.toggleIcon}
+                              size="xx-small"
+                              alternative-text={row.toggleLabel}
+                            ></lightning-icon>
+                          </button>
+                        </template>
+                      </li>
+                    </template>
+                  </ul>
+                </template>
+                <template lwc:else>
+                  <p class="sd-card-empty">No error or warning.</p>
+                </template>
+              </template>
+              <template lwc:else>
+                <p class="sd-card-empty">The log is empty.</p>
+              </template>
+            </lightning-tab>
+          </lightning-tabset>
+        </article>
+      </template>
+    </template>
+  </div>
+</template>

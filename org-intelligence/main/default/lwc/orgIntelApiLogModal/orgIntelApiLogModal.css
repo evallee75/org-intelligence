@@ -1,0 +1,129 @@
+:host {
+  --oi-surface: #ffffff;
+  --oi-surface-muted: #f4f6f9;
+  --oi-border: #e3e8ef;
+  --oi-border-strong: #c9d4e3;
+  --oi-text: #181818;
+  --oi-text-muted: #5c6470;
+  --oi-accent: #0b5cab;
+  --oi-accent-strong: #032d60;
+  --oi-accent-soft: #e6eef8;
+  --oi-accent-soft-strong: #cfdff2;
+  --oi-hover: #f2f6fb;
+  --oi-track: #e9edf2;
+  --oi-tint-neutral: #eef1f5;
+  --oi-tint-critical: #fbe9e9;
+  --oi-tint-serious: #fdeee7;
+  --oi-tint-warning: #fef5de;
+  --oi-tint-good: #e8f5e9;
+  --oi-tint-low: #e8f0fb;
+  --oi-border-critical: #f2c4c4;
+  --oi-border-warning: #f6dc9a;
+  --oi-border-good: #cfe8cf;
+  --oi-critical: #d03b3b;
+  --oi-critical-strong: #c62828;
+  --oi-critical-text: #a12a2a;
+  --oi-serious: #ec835a;
+  --oi-warning: #fab219;
+  --oi-warning-text: #8c5a00;
+  --oi-good: #0ca30c;
+  --oi-good-strong: #2e7d32;
+  --oi-low: #3b7dd8;
+  --oi-neutral: #8a919c;
+  --oi-radius: 12px;
+  --oi-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --oi-shadow-pop: 0 8px 24px rgba(16, 24, 40, 0.14);
+}
+
+.loading {
+  position: relative;
+  min-height: 6rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 0.75rem;
+}
+
+.facts .wide {
+  grid-column: 1 / -1;
+}
+
+dt {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--oi-text-muted);
+}
+
+dd {
+  margin: 0.0625rem 0 0;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+/* Requête et réponse côte à côte sur grand écran */
+.payloads {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.payload {
+  min-width: 0;
+}
+
+.payload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.payload-head h3 {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.code {
+  max-height: 22rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border-radius: 8px;
+  background: #0f1b2d;
+  color: #e7edf5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.error {
+  color: var(--oi-critical-text);
+}
+
+.muted {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--oi-text-muted);
+}
+
+.copied {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--oi-good-strong);
+}
+
+@media (max-width: 48em) {
+  .payloads {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

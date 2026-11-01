@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Justification__c</fullName>
+    <description
+  >Pourquoi la recommandation est émise : règle appliquée et faits constatés.</description>
+    <label>Justification</label>
+    <length>32768</length>
+    <trackHistory>false</trackHistory>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>

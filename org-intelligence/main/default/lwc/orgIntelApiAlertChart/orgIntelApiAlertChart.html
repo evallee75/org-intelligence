@@ -1,0 +1,71 @@
+<template>
+  <svg
+    class={svgClass}
+    viewBox={viewBox}
+    preserveAspectRatio={aspect}
+    role="img"
+    aria-label={label}
+  >
+    <template for:each={geometry.hot} for:item="bar">
+      <rect
+        key={bar.key}
+        x={bar.x}
+        y={bar.y}
+        width={bar.width}
+        height={bar.height}
+        class="hot"
+      ></rect>
+    </template>
+    <template lwc:if={isFull}>
+      <template for:each={geometry.ticks} for:item="tick">
+        <g key={tick.key}>
+          <line
+            x1={tick.x}
+            x2={tick.x}
+            y1={tick.y1}
+            y2={tick.y2}
+            class="tick"
+          ></line>
+          <text x={tick.labelX} y={tick.labelY} class="axis-label">
+            {tick.label}
+          </text>
+        </g>
+      </template>
+      <line
+        x1={geometry.x1}
+        x2={geometry.x2}
+        y1={geometry.baseY}
+        y2={geometry.baseY}
+        class="axis"
+      ></line>
+      <text x="2" y={geometry.maxY} class="axis-label">
+        {geometry.maxLabel}
+      </text>
+      <text x="2" y={geometry.zeroLabelY} class="axis-label">0</text>
+    </template>
+    <path d={geometry.area} class="area"></path>
+    <path d={geometry.line} class="line"></path>
+    <template lwc:if={geometry.hasThreshold}>
+      <line
+        x1={geometry.x1}
+        x2={geometry.x2}
+        y1={geometry.thresholdY}
+        y2={geometry.thresholdY}
+        class="threshold"
+      ></line>
+      <template lwc:if={isFull}>
+        <text
+          x={geometry.thresholdLabelX}
+          y={geometry.thresholdLabelY}
+          text-anchor="end"
+          class="threshold-label"
+        >
+          {geometry.thresholdLabel}
+        </text>
+      </template>
+    </template>
+    <template for:each={geometry.fires} for:item="fire">
+      <polygon key={fire.key} points={fire.points} class="fire"></polygon>
+    </template>
+  </svg>
+</template>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DaysToResolve__c</fullName>
+    <description
+  >Délai entre la création et la résolution, en jours.</description>
+    <label>Days To Resolve</label>
+    <formula
+  >IF(ISBLANK(ResolvedDate__c), NULL, ResolvedDate__c - CreatedDate)</formula>
+    <formulaTreatBlanksAs>BlankAsBlank</formulaTreatBlanksAs>
+    <precision>18</precision>
+    <scale>1</scale>
+    <trackHistory>false</trackHistory>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

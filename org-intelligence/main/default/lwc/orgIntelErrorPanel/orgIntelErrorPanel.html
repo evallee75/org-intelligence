@@ -1,0 +1,22 @@
+<template>
+  <div class="ep-panel" role="alert">
+    <lightning-icon
+      icon-name="utility:error"
+      variant="error"
+      size="small"
+      alternative-text="Error"
+    ></lightning-icon>
+    <div class="ep-body">
+      <h3 class="ep-title">{title}</h3>
+      <p class="message">{message}</p>
+      <template lwc:if={showRetry}>
+        <lightning-button
+          label="Try again"
+          icon-name="utility:refresh"
+          onclick={handleRetry}
+          class="retry"
+        ></lightning-button>
+      </template>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,180 @@
+<template>
+  <div class="sc-control">
+    <template lwc:if={showHistory}>
+      <lightning-button-menu
+        label="Scans"
+        icon-name="utility:clock"
+        menu-alignment="auto"
+        alternative-text="Previous scans"
+        onselect={handleScanSelect}
+      >
+        <template for:each={recentScans} for:item="scan">
+          <lightning-menu-item
+            key={scan.id}
+            value={scan.id}
+            label={scan.label}
+            prefix-icon-name={scan.icon}
+          ></lightning-menu-item>
+        </template>
+        <lightning-menu-divider></lightning-menu-divider>
+        <lightning-menu-item
+          value="all"
+          label="All scans"
+          prefix-icon-name="utility:list"
+        ></lightning-menu-item>
+      </lightning-button-menu>
+    </template>
+
+    <template lwc:if={showData}>
+      <c-org-intel-data-menu
+        data-id="data-menu"
+        kind="scan"
+        disable-save={saveDisabled}
+        save-label="Save the scan to a file (JSON)"
+        open-label="Open a scan file…"
+        onsave={handleSave}
+        onopen={handleOpenFile}
+        onerror={handleDataError}
+      ></c-org-intel-data-menu>
+    </template>
+
+    <template lwc:if={showResume}>
+      <div class="sc-resume" role="status" title={resumeTitle} data-id="resume">
+        <lightning-icon
+          icon-name="utility:warning"
+          size="xx-small"
+          alternative-text="Interrupted scan"
+        ></lightning-icon>
+        <span class="sc-resume-text">{resumeText}</span>
+        <template lwc:if={resumeActions}>
+          <button
+            class="sc-link"
+            onclick={handleResume}
+            disabled={isResuming}
+          >
+            Resume scan
+          </button>
+          <button class="sc-link" onclick={handleDiscard}>Discard</button>
+        </template>
+      </div>
+    </template>
+
+    <template lwc:if={showLauncher}>
+      <lightning-button
+        variant="brand"
+        label={launchLabel}
+        icon-name="utility:play"
+        onclick={handleTogglePanel}
+        disabled={isRunning}
+        data-id="new-scan"
+      ></lightning-button>
+    </template>
+
+    <template lwc:if={isOpen}>
+      <div
+        class="sc-panel sc-launch"
+        role="dialog"
+        aria-label="New scan"
+        style={panelStyle}
+      >
+        <div class="sc-panel-head">
+          <span class="sc-panel-title">
+            What to scan
+            <lightning-helptext
+              content="Read-only: the scan inventories the selected areas and applies the rules. It runs in this browser tab and its results are stored in this browser only: keep the tab open until it finishes (you can switch sections). Your choice is remembered in this browser."
+            ></lightning-helptext>
+          </span>
+          <button class="sc-link" onclick={handleSelectAll}>
+            {toggleAllLabel}
+          </button>
+        </div>
+        <ul class="sc-scope-list" aria-label="Areas to scan">
+          <template for:each={scopeOptions} for:item="option">
+            <li key={option.value}>
+              <label class="sc-scope-row">
+                <input
+                  type="checkbox"
+                  class="sc-scope-check"
+                  data-value={option.value}
+                  checked={option.checked}
+                  onchange={handleScopeToggle}
+                />
+                <span class="sc-scope-label">{option.label}</span>
+                <template lwc:if={option.needsTooling}>
+                  <span
+                    class="sc-scope-tag"
+                    title="Needs the Tooling API connection"
+                    >Tooling</span
+                  >
+                </template>
+              </label>
+            </li>
+          </template>
+        </ul>
+        <template lwc:if={adminHint}>
+          <p class="sc-hint">{adminHint}</p>
+        </template>
+        <template lwc:elseif={toolingHint}>
+          <p class="sc-hint">{toolingHint}</p>
+        </template>
+        <div class="sc-panel-foot">
+          <span>{scopeSummary}</span>
+          <span>Keep this tab open while it runs.</span>
+        </div>
+        <div class="sc-panel-actions">
+          <lightning-button
+            label="Cancel"
+            onclick={handleClosePanel}
+          ></lightning-button>
+          <lightning-button
+            variant="brand"
+            label={startLabel}
+            onclick={handleStart}
+            disabled={startDisabled}
+          ></lightning-button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Fichier de scan ouvert : remplacer le dernier scan ou consulter seulement -->
+    <template lwc:if={pendingFile}>
+      <div
+        class="sc-panel sc-choice"
+        role="dialog"
+        aria-label="Open a scan file"
+        style={choiceStyle}
+      >
+        <div class="sc-panel-head">
+          <span class="sc-panel-title">
+            Open a scan file
+            <lightning-helptext
+              content="View only: the scan is shown in this tab and nothing is stored. Replace: it becomes the latest scan of this browser, used by Overview, Automation and Storage."
+            ></lightning-helptext>
+          </span>
+        </div>
+        <p class="sc-file">{pendingTitle}</p>
+        <template lwc:if={otherOrgWarning}>
+          <p class="sc-hint" role="alert">{otherOrgWarning}</p>
+        </template>
+        <template lwc:if={olderWarning}>
+          <p class="sc-hint">{olderWarning}</p>
+        </template>
+        <div class="sc-panel-actions">
+          <lightning-button
+            label="Cancel"
+            onclick={handleCancelFile}
+          ></lightning-button>
+          <lightning-button
+            label="Replace the latest scan"
+            onclick={handleReplace}
+          ></lightning-button>
+          <lightning-button
+            variant="brand"
+            label="View only"
+            onclick={handleViewOnly}
+          ></lightning-button>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>

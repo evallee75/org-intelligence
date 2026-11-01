@@ -1,0 +1,51 @@
+{
+  "name": "org-intelligence",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Org Intelligence - open-source Salesforce org health scanner",
+  "scripts": {
+    "lint": "eslint **/{aura,lwc}/**/*.js",
+    "test": "npm run test:unit",
+    "test:unit": "sfdx-lwc-jest",
+    "test:unit:watch": "sfdx-lwc-jest --watch",
+    "test:unit:debug": "sfdx-lwc-jest --debug",
+    "test:unit:coverage": "sfdx-lwc-jest --coverage",
+    "test:unit:coverage:models": "sfdx-lwc-jest --coverage -- --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelScanData/orgIntelScanData.js --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelRecommendationStore/orgIntelRecommendationStore.js --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelStore/orgIntelStore.js --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelScanEngine/orgIntelScanEngine.js --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelRoadmapModel/orgIntelRoadmapModel.js --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelAutomationModel/orgIntelAutomationModel.js --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelUtils/orgIntelUtils.js --collectCoverageFrom=org-intelligence/main/default/lwc/orgIntelPermissionsModel/orgIntelPermissionsModel.js",
+    "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    "prettier:verify": "prettier --check \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    "prepare": "husky || true",
+    "precommit": "lint-staged",
+    "check:modules": "node scripts/check-module-boundaries.mjs && node scripts/build-uninstall-manifest.mjs --check",
+    "install:org": "node scripts/install.mjs",
+    "build:uninstall-manifest": "node scripts/build-uninstall-manifest.mjs",
+    "uninstall:org": "node scripts/uninstall.mjs",
+    "smoke-test": "node scripts/smoke-test.mjs"
+  },
+  "devDependencies": {
+    "@lwc/eslint-plugin-lwc": "^3.1.0",
+    "@prettier/plugin-xml": "^3.4.1",
+    "@salesforce/eslint-config-lwc": "^4.0.0",
+    "@salesforce/eslint-plugin-aura": "^3.0.0",
+    "@salesforce/eslint-plugin-lightning": "^2.0.0",
+    "@salesforce/sfdx-lwc-jest": "^7.0.2",
+    "eslint": "^9.29.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jest": "^28.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.5.3",
+    "prettier-plugin-apex": "^2.2.6"
+  },
+  "lint-staged": {
+    "**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}": [
+      "prettier --write"
+    ],
+    "**/{aura,lwc}/**/*.js": [
+      "eslint"
+    ],
+    "**/lwc/**": [
+      "sfdx-lwc-jest -- --bail --findRelatedTests --passWithNoTests"
+    ]
+  },
+  "license": "MIT"
+}

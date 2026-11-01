@@ -1,0 +1,483 @@
+<template>
+  <template lwc:if={isLoading}>
+    <div class="loading" role="status">
+      <lightning-spinner
+        alternative-text="Loading the alerts"
+        size="medium"
+      ></lightning-spinner>
+    </div>
+  </template>
+  <template lwc:elseif={error}>
+    <c-org-intel-error-panel
+      title="The alerts could not be loaded"
+      error={error}
+      show-retry
+      onretry={refresh}
+    ></c-org-intel-error-panel>
+  </template>
+  <template lwc:else>
+    <div class="alerts">
+      <!-- Bandeau : planification, indicateurs, actions -->
+      <section class={statusClass} aria-label="Alert checks">
+        <div class="status-main">
+          <span class={pulseClass} aria-hidden="true"></span>
+          <div class="status-text">
+            <span class="status-title"
+              >{scheduleTitle}
+              <lightning-helptext content={scheduleDetail}></lightning-helptext
+            ></span>
+          </div>
+          <div class="segments" role="radiogroup" aria-label="Check frequency">
+            <template for:each={frequencies} for:item="option">
+              <button
+                key={option.key}
+                type="button"
+                role="radio"
+                class={option.className}
+                aria-checked={option.checked}
+                data-value={option.value}
+                disabled={isScheduling}
+                onclick={handleFrequency}
+              >
+                {option.label}
+              </button>
+            </template>
+          </div>
+        </div>
+        <template lwc:if={hasRules}>
+          <div class="status-kpis">
+            <template for:each={kpis} for:item="kpi">
+              <div key={kpi.key} class={kpi.className}>
+                <span class="mini-kpi-value">{kpi.value}</span>
+                <span class="mini-kpi-label">{kpi.label}</span>
+              </div>
+            </template>
+          </div>
+        </template>
+        <div class="status-actions">
+          <lightning-button
+            label="Check now"
+            icon-name="utility:play"
+            onclick={handleCheckAll}
+            disabled={isChecking}
+          ></lightning-button>
+          <lightning-button
+            variant="brand"
+            label="New rule"
+            icon-name="utility:add"
+            onclick={handleNewRule}
+          ></lightning-button>
+        </div>
+      </section>
+
+      <div class={columnsClass}>
+        <!-- Règles -->
+        <section class="rules" aria-label="Alert rules">
+          <div class="section-head">
+            <h3 class="section-title">Rules</h3>
+            <c-org-intel-export-menu
+              compact
+              disabled={noRules}
+              alternative-text="Export the alert rules"
+              onexport={handleExportRules}
+            ></c-org-intel-export-menu>
+          </div>
+          <template lwc:if={hasRules}>
+            <ul class="rule-list">
+              <template for:each={rules} for:item="rule">
+                <li key={rule.id} class={rule.className}>
+                  <div class="rule-head">
+                    <c-org-intel-badge
+                      label={rule.severity}
+                      tone={rule.severityTone}
+                    ></c-org-intel-badge>
+                    <button
+                      type="button"
+                      class="rule-name"
+                      data-id={rule.id}
+                      onclick={handleEditClick}
+                      title="Edit the rule"
+                    >
+                      {rule.name}
+                    </button>
+                    <lightning-input
+                      type="toggle"
+                      label="Active"
+                      variant="label-hidden"
+                      checked={rule.active}
+                      data-id={rule.id}
+                      message-toggle-active=""
+                      message-toggle-inactive=""
+                      onchange={handleToggle}
+                      class="rule-toggle"
+                    ></lightning-input>
+                    <lightning-button-menu
+                      alternative-text="Rule actions"
+                      icon-size="x-small"
+                      menu-alignment="right"
+                      data-id={rule.id}
+                      onselect={handleRuleAction}
+                    >
+                      <lightning-menu-item
+                        value="edit"
+                        label="Edit"
+                        prefix-icon-name="utility:edit"
+                      ></lightning-menu-item>
+                      <lightning-menu-item
+                        value="duplicate"
+                        label="Duplicate"
+                        prefix-icon-name="utility:copy"
+                      ></lightning-menu-item>
+                      <lightning-menu-item
+                        value="check"
+                        label="Check now"
+                        prefix-icon-name="utility:play"
+                      ></lightning-menu-item>
+                      <lightning-menu-item
+                        value="test"
+                        label="Send a test notification"
+                        prefix-icon-name="utility:send"
+                      ></lightning-menu-item>
+                      <lightning-menu-divider></lightning-menu-divider>
+                      <lightning-menu-item
+                        value="delete"
+                        label="Delete"
+                        prefix-icon-name="utility:delete"
+                      ></lightning-menu-item>
+                    </lightning-button-menu>
+                  </div>
+                  <p class="rule-sentence">{rule.sentence}</p>
+                  <div class="rule-body">
+                    <div class="rule-figures">
+                      <span class={rule.valueClass}>{rule.currentText}</span>
+                      <span class="rule-threshold"
+                        >threshold {rule.thresholdText}</span
+                      >
+                      <c-org-intel-badge
+                        label={rule.stateLabel}
+                        tone={rule.stateTone}
+                      ></c-org-intel-badge>
+                    </div>
+                    <template lwc:if={rule.hasSparkline}>
+                      <div class="rule-spark">
+                        <c-org-intel-api-alert-chart
+                          values={rule.sparkline}
+                          threshold={rule.threshold}
+                          comparator={rule.comparator}
+                          label="Last 24 hours"
+                        ></c-org-intel-api-alert-chart>
+                        <span class="spark-caption">last 24 h</span>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="rule-foot">
+                    <span class="rule-channels">
+                      <template for:each={rule.channelList} for:item="channel">
+                        <span
+                          key={channel.key}
+                          class="channel-icon"
+                          title={channel.label}
+                        >
+                          <lightning-icon
+                            icon-name={channel.icon}
+                            size="xx-small"
+                            alternative-text={channel.label}
+                          ></lightning-icon>
+                        </span>
+                      </template>
+                    </span>
+                    <span class="muted"
+                      >{rule.footer} · {rule.checkedText}</span
+                    >
+                    <template lwc:if={rule.hasOpenAlerts}>
+                      <span class="open-pill">{rule.openAlertsText}</span>
+                    </template>
+                    <template lwc:if={rule.isBusy}>
+                      <span class="muted">Checking…</span>
+                    </template>
+                  </div>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:else>
+            <div class="empty-rules">
+              <p class="empty-title">
+                No alert rule yet
+                <lightning-helptext
+                  content="Pick a template: you can adjust everything and preview it on the last 7 days before saving."
+                ></lightning-helptext>
+              </p>
+              <p class="muted">Start from a template:</p>
+              <div class="templates">
+                <template for:each={templates} for:item="template">
+                  <button
+                    key={template.key}
+                    type="button"
+                    class={template.className}
+                    data-key={template.key}
+                    title={template.description}
+                    onclick={handleTemplate}
+                  >
+                    <span class="template-icon">
+                      <lightning-icon
+                        icon-name={template.icon}
+                        size="x-small"
+                      ></lightning-icon>
+                    </span>
+                    <span class="template-title">{template.title}</span>
+                  </button>
+                </template>
+              </div>
+            </div>
+          </template>
+        </section>
+
+        <!-- Historique -->
+        <section class="history" aria-label="Alert history">
+          <div class="history-head">
+            <h3 class="section-title">Alerts</h3>
+            <div class="filters" role="group" aria-label="Alert filter">
+              <template for:each={eventFilterOptions} for:item="option">
+                <button
+                  key={option.value}
+                  type="button"
+                  class={option.className}
+                  aria-pressed={option.pressed}
+                  data-value={option.value}
+                  onclick={handleEventFilter}
+                >
+                  {option.label}
+                </button>
+              </template>
+              <c-org-intel-export-menu
+                compact
+                disabled={noEvents}
+                alternative-text="Export the alerts shown"
+                onexport={handleExportEvents}
+              ></c-org-intel-export-menu>
+            </div>
+          </div>
+          <template lwc:if={hasOpenEvents}>
+            <button type="button" class="link" onclick={handleAcknowledgeAll}>
+              Acknowledge all open alerts
+            </button>
+          </template>
+          <template lwc:if={hasEvents}>
+            <ol class="timeline">
+              <template for:each={events} for:item="event">
+                <li key={event.id} class={event.className}>
+                  <span class="event-dot" aria-hidden="true"></span>
+                  <div class="event-body">
+                    <div class="event-head">
+                      <span class="event-rule">{event.ruleName}</span>
+                      <span class="event-when" title={event.whenTitle}
+                        >{event.when}</span
+                      >
+                    </div>
+                    <div class="event-figures">
+                      <span class="event-value">{event.valueText}</span>
+                      <span class="muted">threshold {event.thresholdText}</span>
+                      <c-org-intel-badge
+                        label={event.status}
+                        tone={event.statusTone}
+                      ></c-org-intel-badge>
+                    </div>
+                    <p class="event-summary">{event.headline}</p>
+                    <template lwc:if={event.deliveryErrors}>
+                      <p class="event-warning" title={event.deliveryErrors}>
+                        ⚠ Some notifications failed: {event.deliveryErrors}
+                      </p>
+                    </template>
+                    <div class="event-foot">
+                      <span class="rule-channels">
+                        <template
+                          for:each={event.channelList}
+                          for:item="channel"
+                        >
+                          <span
+                            key={channel.key}
+                            class="channel-icon"
+                            title={channel.label}
+                          >
+                            <lightning-icon
+                              icon-name={channel.icon}
+                              size="xx-small"
+                              alternative-text={channel.label}
+                            ></lightning-icon>
+                          </span>
+                        </template>
+                      </span>
+                      <template lwc:if={event.taskUrl}>
+                        <a href={event.taskUrl} target="_blank" class="link"
+                          >Open task ↗</a
+                        >
+                      </template>
+                      <span class="event-actions">
+                        <template lwc:if={event.isOpen}>
+                          <button
+                            type="button"
+                            class="action"
+                            data-id={event.id}
+                            onclick={handleAcknowledge}
+                          >
+                            Acknowledge
+                          </button>
+                          <button
+                            type="button"
+                            class="action"
+                            data-id={event.id}
+                            onclick={handleResolve}
+                          >
+                            Resolve
+                          </button>
+                        </template>
+                        <template lwc:elseif={event.isAcknowledged}>
+                          <button
+                            type="button"
+                            class="action"
+                            data-id={event.id}
+                            onclick={handleResolve}
+                          >
+                            Resolve
+                          </button>
+                        </template>
+                        <template lwc:else>
+                          <button
+                            type="button"
+                            class="action"
+                            data-id={event.id}
+                            onclick={handleReopen}
+                          >
+                            Reopen
+                          </button>
+                        </template>
+                      </span>
+                    </div>
+                    <template lwc:if={event.handledText}>
+                      <span class="muted">{event.handledText}</span>
+                    </template>
+                  </div>
+                </li>
+              </template>
+            </ol>
+          </template>
+          <template lwc:else>
+            <div class="quiet">
+              <lightning-icon
+                icon-name="utility:check"
+                size="small"
+              ></lightning-icon>
+              <span>{noEventText}</span>
+            </div>
+          </template>
+        </section>
+      </div>
+
+      <!-- Types d'erreurs -->
+      <section class="card" aria-label="Error types">
+        <div class="card-head">
+          <div>
+            <h3 class="section-title">
+              Error types
+              <lightning-helptext
+                content="Errors grouped by system, HTTP status and message (numbers and Ids ignored). Create an alert from any row."
+              ></lightning-helptext>
+            </h3>
+            <p class="muted">{errorTypesCaption}</p>
+          </div>
+          <c-org-intel-export-menu
+            compact
+            disabled={noErrorTypes}
+            alternative-text="Export the error types"
+            onexport={handleExportErrorTypes}
+          ></c-org-intel-export-menu>
+        </div>
+        <template lwc:if={isLoadingTypes}>
+          <div class="loading-small" role="status">
+            <lightning-spinner
+              alternative-text="Loading the error types"
+              size="small"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:elseif={errorTypesError}>
+          <c-org-intel-error-panel
+            title="The error types could not be loaded"
+            error={errorTypesError}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:elseif={hasErrorTypes}>
+          <div class="table-scroll">
+            <table class="types">
+              <thead>
+                <tr>
+                  <th scope="col">System</th>
+                  <th scope="col">HTTP</th>
+                  <th scope="col">Error</th>
+                  <th scope="col">Per day</th>
+                  <th scope="col" class="num">Count</th>
+                  <th scope="col">24 h trend</th>
+                  <th scope="col">Last seen</th>
+                  <th scope="col"><span class="assistive">Action</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template for:each={errorTypeRows} for:item="type">
+                  <tr key={type.key}>
+                    <td class="type-system">{type.systemName}</td>
+                    <td>
+                      <span class={type.statusClass}>{type.statusText}</span>
+                    </td>
+                    <td class="type-pattern" title={type.sampleMessage}>
+                      {type.pattern}
+                      <span class="type-operation">{type.operation}</span>
+                    </td>
+                    <td>
+                      <span class="bars" title={type.peakText}>
+                        <template for:each={type.bars} for:item="bar">
+                          <span
+                            key={bar.key}
+                            class={bar.className}
+                            style={bar.style}
+                            title={bar.title}
+                          ></span>
+                        </template>
+                      </span>
+                    </td>
+                    <td class="num strong">{type.count}</td>
+                    <td>
+                      <span class={type.trendClass} title={type.trendTitle}
+                        >{type.trendText}</span
+                      >
+                    </td>
+                    <td title={type.lastTitle}>{type.lastText}</td>
+                    <td class="type-action">
+                      <lightning-button-icon
+                        icon-name="utility:notification"
+                        variant="border-filled"
+                        alternative-text="Create an alert for this error type"
+                        title="Create an alert for this error type"
+                        data-key={type.key}
+                        onclick={handleCreateFromType}
+                      ></lightning-button-icon>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+        <template lwc:else>
+          <div class="quiet">
+            <lightning-icon
+              icon-name="utility:check"
+              size="small"
+            ></lightning-icon>
+            <span>No API error in this period.</span>
+          </div>
+        </template>
+      </section>
+    </div>
+  </template>
+</template>

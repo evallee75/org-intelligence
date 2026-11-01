@@ -1,0 +1,66 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--oi-surface);
+  border: 1px solid var(--oi-border);
+  border-radius: var(--oi-radius);
+  box-shadow: var(--oi-shadow);
+}
+
+.empty-unavailable {
+  background: var(--oi-surface-muted);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.illustration {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 1rem;
+}
+
+.ring-outer {
+  fill: var(--oi-accent-soft);
+}
+
+.ring-inner {
+  fill: var(--oi-accent-soft-strong);
+}
+
+.illustration-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  --slds-c-icon-color-foreground-default: var(--oi-accent);
+}
+
+.pill {
+  margin-bottom: 0.5rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--oi-text-muted);
+  background: var(--oi-tint-neutral);
+}
+
+.es-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--oi-text);
+}
+
+.message {
+  max-width: 36rem;
+  margin-top: 0.5rem;
+  color: var(--oi-text-muted);
+}
+
+.actions {
+  margin-top: 1.25rem;
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description
+  >Accès au module Context Hub d&apos;Org Intelligence (export du contexte vers une IA externe, sans objet personnalisé).</description>
+    <isLicensed>false</isLicensed>
+    <label>Org Intelligence - Context Hub</label>
+</CustomPermission>

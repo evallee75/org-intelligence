@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AcknowledgedBy__c</fullName>
+    <label>Acknowledged By</label>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <referenceTo>User</referenceTo>
+    <relationshipName>OrgApiAlertsAcknowledged</relationshipName>
+    <required>false</required>
+    <type>Lookup</type>
+</CustomField>

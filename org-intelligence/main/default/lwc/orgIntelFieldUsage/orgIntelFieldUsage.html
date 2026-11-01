@@ -1,0 +1,601 @@
+<template>
+  <div class="usage">
+    <div class="toolbar">
+      <h2 class="page-title">
+        Objects &amp; Fields
+        <lightning-helptext
+          content="Pick an object: every record is counted to find the fields nobody fills, the fields shown on no layout and those referenced nowhere."
+        ></lightning-helptext>
+      </h2>
+      <div class="toolbar-actions">
+        <c-org-intel-browser-badge
+          help="Analyses are computed on demand and kept in this browser, never in the org. Use the Data menu to save them to a file, to share them with another admin or keep a longer history."
+        ></c-org-intel-browser-badge>
+        <c-org-intel-data-menu
+          kind="fieldUsage"
+          allow-clear
+          clear-message="Delete every object analysis stored in this browser? Save them to a file first if you need them."
+          onsave={handleExportJson}
+          onopen={handleDataOpen}
+          onclear={handleClearData}
+          onerror={handleDataError}
+        ></c-org-intel-data-menu>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <div class="fu-body">
+      <!-- Objets -->
+      <aside class="objects" aria-label="Objects">
+        <div class="objects-search">
+          <lightning-input
+            type="search"
+            label="Search an object"
+            variant="label-hidden"
+            placeholder="Search an object…"
+            value={objectSearch}
+            onchange={handleObjectSearch}
+            class="objects-search-input"
+          ></lightning-input>
+          <c-org-intel-export-menu
+            class="objects-export"
+            compact
+            alternative-text="Export the objects listed"
+            onexport={handleExportObjects}
+          ></c-org-intel-export-menu>
+        </div>
+        <div class="chips" role="group" aria-label="Filter objects">
+          <template for:each={objectFilters} for:item="filter">
+            <button
+              key={filter.value}
+              type="button"
+              class={filter.className}
+              data-value={filter.value}
+              aria-pressed={filter.pressed}
+              onclick={handleObjectFilter}
+            >
+              {filter.label}
+            </button>
+          </template>
+        </div>
+        <template lwc:if={isLoadingObjects}>
+          <div class="loading-small" role="status">
+            <lightning-spinner
+              alternative-text="Loading the objects"
+              size="small"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:elseif={objectsError}>
+          <c-org-intel-error-panel
+            title="The objects could not be loaded"
+            error={objectsError}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:elseif={hasObjectItems}>
+          <ul class="object-list">
+            <template for:each={objectItems} for:item="item">
+              <li key={item.apiName}>
+                <button
+                  type="button"
+                  class={item.className}
+                  data-name={item.apiName}
+                  aria-current={item.current}
+                  title={item.apiName}
+                  onclick={handleSelectObject}
+                >
+                  <span class="object-name">{item.label}</span>
+                  <span class="object-meta">{item.meta}</span>
+                  <template lwc:if={item.hasScore}>
+                    <span class={item.scoreClass} title={item.scoreTitle}
+                      >{item.score}</span
+                    >
+                  </template>
+                </button>
+              </li>
+            </template>
+          </ul>
+        </template>
+        <template lwc:else>
+          <p class="muted empty">No object matches.</p>
+        </template>
+      </aside>
+
+      <section class="fu-main">
+        <template lwc:if={isLoadingView}>
+          <div class="loading" role="status">
+            <lightning-spinner
+              alternative-text="Loading the analysis"
+              size="medium"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:elseif={viewError}>
+          <c-org-intel-error-panel
+            title="The analysis could not be loaded"
+            error={viewError}
+            show-retry
+            onretry={handleRefresh}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:elseif={hasView}>
+          <!-- En-tête de l'objet -->
+          <article class="card header-card">
+            <div class="header-text">
+              <h3 class="object-title">{objectTitle}</h3>
+              <p class="muted">{objectSubtitle}</p>
+            </div>
+            <div class="header-actions">
+              <template lwc:if={hasHistory}>
+                <lightning-combobox
+                  label="Analysis"
+                  variant="label-hidden"
+                  options={historyOptions}
+                  value={currentAnalysisId}
+                  onchange={handleHistory}
+                  class="history"
+                ></lightning-combobox>
+              </template>
+              <lightning-combobox
+                label="Recent period"
+                variant="label-hidden"
+                options={recentOptions}
+                value={recentDays}
+                onchange={handleRecentDays}
+                class="recent"
+              ></lightning-combobox>
+              <lightning-button
+                variant="brand"
+                label={analyzeLabel}
+                icon-name="utility:play"
+                title={analyzeTitle}
+                disabled={analyzeDisabled}
+                onclick={handleAnalyze}
+              ></lightning-button>
+            </div>
+          </article>
+          <template lwc:if={isRunning}>
+            <article class="card running" role="status">
+              <div class="running-head">
+                <lightning-icon
+                  icon-name="utility:spinner"
+                  size="x-small"
+                  class="spin"
+                ></lightning-icon>
+                <span class="running-title">Analyzing {objectTitle}…</span>
+                <span class="muted running-text" title={progressText}
+                  >{progressText}</span
+                >
+                <lightning-button
+                  label="Stop"
+                  icon-name="utility:stop"
+                  class="running-stop"
+                  title="Stop the analysis: it can be resumed later"
+                  disabled={stopDisabled}
+                  onclick={handleStop}
+                ></lightning-button>
+              </div>
+              <div class="progress" aria-hidden="true">
+                <div class={progressClass} style={progressStyle}></div>
+              </div>
+            </article>
+          </template>
+
+          <template lwc:if={hasPending}>
+            <div class="banner banner-warning" role="status">
+              <lightning-icon
+                icon-name="utility:pause"
+                size="x-small"
+              ></lightning-icon>
+              <span class="banner-text">{pendingText}</span>
+              <lightning-button
+                label="Resume"
+                variant="brand"
+                icon-name="utility:play"
+                disabled={analyzeDisabled}
+                onclick={handleResume}
+              ></lightning-button>
+              <lightning-button
+                label="Discard"
+                onclick={handleDiscardPending}
+              ></lightning-button>
+            </div>
+          </template>
+
+          <template lwc:if={isCompleted}>
+            <!-- Synthèse -->
+            <section class="summary" aria-label="Summary">
+              <div class="kpis">
+                <template for:each={kpis} for:item="kpi">
+                  <template lwc:if={kpi.isFilter}>
+                    <button
+                      key={kpi.key}
+                      type="button"
+                      class={kpi.className}
+                      data-value={kpi.filter}
+                      title={kpi.title}
+                      aria-pressed={kpi.pressed}
+                      onclick={handleStatusPick}
+                    >
+                      <span class="kpi-label">{kpi.label}</span>
+                      <span class="kpi-value">{kpi.value}</span>
+                      <span class="kpi-caption">{kpi.caption}</span>
+                    </button>
+                  </template>
+                  <template lwc:else>
+                    <div key={kpi.key} class={kpi.className} title={kpi.title}>
+                      <span class="kpi-label">{kpi.label}</span>
+                      <span class="kpi-value">{kpi.value}</span>
+                      <span class="kpi-caption">{kpi.caption}</span>
+                    </div>
+                  </template>
+                </template>
+              </div>
+            </section>
+
+            <article class="card">
+              <template lwc:if={notes}>
+                <p class="notes" title={notes}>
+                  <lightning-icon
+                    icon-name="utility:warning"
+                    size="xx-small"
+                    alternative-text="Warning"
+                  ></lightning-icon>
+                  <span class="notes-text">{notes}</span>
+                </p>
+              </template>
+
+              <!-- Tableau des champs -->
+              <div class="filters">
+                <lightning-input
+                  type="search"
+                  label="Search a field"
+                  variant="label-hidden"
+                  placeholder="Search a field…"
+                  value={search}
+                  onchange={handleSearch}
+                  class="filter-search"
+                ></lightning-input>
+                <lightning-combobox
+                  label="Status"
+                  variant="label-hidden"
+                  options={statusOptions}
+                  value={statusFilter}
+                  onchange={handleStatusFilter}
+                  class="filter-status"
+                ></lightning-combobox>
+                <lightning-input
+                  type="toggle"
+                  label="Custom only"
+                  checked={customOnly}
+                  onchange={handleCustomOnly}
+                  message-toggle-active=""
+                  message-toggle-inactive=""
+                ></lightning-input>
+                <lightning-input
+                  type="toggle"
+                  label="Hide calculated"
+                  checked={hideCalculated}
+                  onchange={handleHideCalculated}
+                  message-toggle-active=""
+                  message-toggle-inactive=""
+                ></lightning-input>
+                <div class="filter-actions">
+                  <span class="muted count-line">
+                    {rowCountText}
+                    <lightning-helptext
+                      content={tableHelp}
+                    ></lightning-helptext>
+                  </span>
+                  <template lwc:if={canSendToRecommendations}>
+                    <a
+                      href="#"
+                      class="reco-link"
+                      title="Open the field recommendations of this object"
+                      onclick={handleOpenRecommendations}
+                      >Recommendations</a
+                    >
+                    <lightning-button
+                      label={sendLabel}
+                      icon-name="utility:task"
+                      disabled={sendDisabled}
+                      onclick={handleSend}
+                    ></lightning-button>
+                  </template>
+                  <c-org-intel-export-menu
+                    compact
+                    disabled={noFields}
+                    alternative-text="Export the fields (Excel: fields shown + all fields)"
+                    onexport={handleExport}
+                  ></c-org-intel-export-menu>
+                </div>
+              </div>
+
+              <template lwc:if={hasRows}>
+                <div class="table-scroll">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th scope="col" class="col-check">
+                          <input
+                            type="checkbox"
+                            class="check"
+                            aria-label="Select all fields to clean up"
+                            checked={allChecked}
+                            disabled={noneSelectable}
+                            onchange={handleCheckAll}
+                          />
+                        </th>
+                        <template for:each={columns} for:item="column">
+                          <th
+                            key={column.key}
+                            scope="col"
+                            aria-sort={column.ariaSort}
+                          >
+                            <button
+                              type="button"
+                              class={column.className}
+                              data-key={column.key}
+                              title={column.hint}
+                              onclick={handleSort}
+                            >
+                              {column.label}
+                              <span class="arrow">{column.arrow}</span>
+                            </button>
+                          </th>
+                        </template>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={rows} for:item="row">
+                        <tr
+                          key={row.key}
+                          class={row.rowClass}
+                          data-id={row.id}
+                          tabindex="0"
+                          aria-expanded={row.ariaExpanded}
+                          onclick={handleToggleRow}
+                          onkeydown={handleRowKey}
+                        >
+                          <td class="col-check">
+                            <template lwc:if={row.selectable}>
+                              <input
+                                type="checkbox"
+                                class="check"
+                                aria-label={row.checkLabel}
+                                data-id={row.id}
+                                checked={row.checked}
+                                onclick={stopPropagation}
+                                onchange={handleCheck}
+                              />
+                            </template>
+                          </td>
+                          <td class="col-field" title={row.fieldTitle}>
+                            <span class="field-line">
+                              <lightning-icon
+                                icon-name={row.toggleIcon}
+                                size="xx-small"
+                                class="chevron"
+                                alternative-text={row.toggleLabel}
+                              ></lightning-icon>
+                              <span class="field-label">{row.label}</span>
+                              <span class={row.originClass}
+                                >{row.originLabel}</span
+                              >
+                              <span class="field-api">{row.apiName}</span>
+                            </span>
+                          </td>
+                          <td class="col-fill" title={row.fillTitle}>
+                            <div class="bar">
+                              <div
+                                class={row.fillClass}
+                                style={row.fillStyle}
+                              ></div>
+                            </div>
+                            <span class="fill-text">{row.fillText}</span>
+                          </td>
+                          <td>
+                            <span
+                              class={row.trend.className}
+                              title={row.trend.title}
+                              >{row.trend.text}</span
+                            >
+                          </td>
+                          <td>
+                            <span
+                              class={row.layoutClass}
+                              title={row.layoutTitle}
+                              >{row.layoutText}</span
+                            >
+                          </td>
+                          <td>
+                            <span class="deps" title={row.dependencyTitle}
+                              >{row.dependencyText}</span
+                            >
+                          </td>
+                          <td class="col-date" title={row.lastFilledTitle}>
+                            {row.lastFilledText}
+                          </td>
+                          <td class="col-status" title={row.recommendation}>
+                            <c-org-intel-badge
+                              label={row.status}
+                              tone={row.meta.tone}
+                            ></c-org-intel-badge>
+                          </td>
+                        </tr>
+                        <template lwc:if={row.expanded}>
+                          <tr key={row.detailKey} class="detail-row">
+                            <td colspan="8">
+                              <div class="detail">
+                                <div class="detail-head">
+                                  <div>
+                                    <span class={expanded.statusClass}
+                                      >{expanded.status}</span
+                                    >
+                                    <p class="detail-reco">
+                                      {expanded.recommendation}
+                                    </p>
+                                  </div>
+                                  <div class="detail-actions">
+                                    <template lwc:if={expanded.setupLink}>
+                                      <a
+                                        href={expanded.setupLink}
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="open-link"
+                                        >Fields in Setup ↗</a
+                                      >
+                                    </template>
+                                    <lightning-button-icon
+                                      icon-name="utility:close"
+                                      variant="bare"
+                                      alternative-text="Close"
+                                      title="Close"
+                                      onclick={handleCloseDetail}
+                                    ></lightning-button-icon>
+                                  </div>
+                                </div>
+                                <div class="detail-grid">
+                                  <section>
+                                    <h4 class="sub-title">Definition</h4>
+                                    <dl class="facts">
+                                      <template
+                                        for:each={expanded.facts}
+                                        for:item="fact"
+                                      >
+                                        <dt key={fact.key}>{fact.label}</dt>
+                                        <dd key={fact.valueKey}>
+                                          {fact.value}
+                                        </dd>
+                                      </template>
+                                    </dl>
+                                    <template lwc:if={expanded.hasDescription}>
+                                      <h4 class="sub-title">Description</h4>
+                                      <p class="text">{expanded.description}</p>
+                                    </template>
+                                    <template lwc:if={expanded.hasHelpText}>
+                                      <h4 class="sub-title">Help text</h4>
+                                      <p class="text">{expanded.helpText}</p>
+                                    </template>
+                                  </section>
+                                  <section>
+                                    <h4 class="sub-title">
+                                      Most frequent values
+                                    </h4>
+                                    <template lwc:if={expanded.hasValues}>
+                                      <ul class="values">
+                                        <template
+                                          for:each={expanded.values}
+                                          for:item="value"
+                                        >
+                                          <li key={value.key}>
+                                            <span
+                                              class="value-label"
+                                              title={value.label}
+                                              >{value.label}</span
+                                            >
+                                            <span class="value-bar">
+                                              <span
+                                                class="value-fill"
+                                                style={value.style}
+                                              ></span>
+                                            </span>
+                                            <span class="value-count"
+                                              >{value.count} ·
+                                              {value.share}</span
+                                            >
+                                          </li>
+                                        </template>
+                                      </ul>
+                                    </template>
+                                    <template lwc:else>
+                                      <p class="muted">
+                                        Picklists and checkboxes only.
+                                        <lightning-helptext
+                                          content="Free text values are never displayed."
+                                        ></lightning-helptext>
+                                      </p>
+                                    </template>
+                                  </section>
+                                  <section>
+                                    <h4 class="sub-title">Layouts</h4>
+                                    <template lwc:if={expanded.hasLayouts}>
+                                      <ul class="tags">
+                                        <template
+                                          for:each={expanded.layouts}
+                                          for:item="layout"
+                                        >
+                                          <li key={layout.key} class="tag">
+                                            {layout.name}
+                                          </li>
+                                        </template>
+                                      </ul>
+                                    </template>
+                                    <template lwc:else>
+                                      <p class="muted">
+                                        {expanded.layoutsText}
+                                      </p>
+                                    </template>
+                                    <h4 class="sub-title">Used by</h4>
+                                    <template lwc:if={expanded.hasDependencies}>
+                                      <ul class="deps-list">
+                                        <template
+                                          for:each={expanded.dependencies}
+                                          for:item="dependency"
+                                        >
+                                          <li key={dependency.key}>
+                                            <span class="dep-type"
+                                              >{dependency.type}</span
+                                            >
+                                            {dependency.name}
+                                          </li>
+                                        </template>
+                                      </ul>
+                                    </template>
+                                    <template lwc:else>
+                                      <p class="muted">
+                                        {expanded.dependenciesText}
+                                      </p>
+                                    </template>
+                                  </section>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+              <template lwc:else>
+                <p class="muted empty">No field matches.</p>
+              </template>
+            </article>
+          </template>
+
+          <template lwc:if={noAnalysis}>
+            <c-org-intel-empty-state
+              title="This object has not been analyzed yet"
+              message="Reads every record from this page, then checks layouts and dependencies. Keep the tab open."
+              icon-name="utility:table"
+            >
+              <lightning-button
+                variant="brand"
+                label="Run analysis"
+                icon-name="utility:play"
+                disabled={analyzeDisabled}
+                onclick={handleAnalyze}
+              ></lightning-button>
+            </c-org-intel-empty-state>
+          </template>
+        </template>
+      </section>
+    </div>
+  </div>
+</template>

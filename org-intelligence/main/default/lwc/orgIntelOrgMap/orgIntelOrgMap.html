@@ -1,0 +1,192 @@
+<template>
+  <article class="card">
+    <header class="map-head">
+      <div class="map-title">
+        <h3 class="card-title">
+          How objects feed each other
+          <lightning-helptext
+            content="Hover an object to highlight what it touches, click it to open its order of execution. What Apex triggers write is not analyzed."
+          ></lightning-helptext>
+        </h3>
+        <span class="muted">{summaryText}</span>
+      </div>
+      <div class="map-tools">
+        <lightning-input
+          type="search"
+          label="Find an object"
+          variant="label-hidden"
+          placeholder="Find an object…"
+          value={search}
+          onchange={handleSearch}
+          class="map-search"
+        ></lightning-input>
+        <lightning-button
+          label="Issues only"
+          icon-name="utility:filterList"
+          variant={focusVariant}
+          onclick={handleFocusIssues}
+          title="Show only objects with conflicts, loops or failed runs, and their neighbours"
+        ></lightning-button>
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button
+            type="button"
+            class="zoom-button"
+            title="Zoom out"
+            aria-label="Zoom out"
+            onclick={handleZoomOut}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            class="zoom-value"
+            title="Reset to 100%"
+            aria-label="Reset zoom"
+            onclick={handleZoomReset}
+          >
+            {zoomText}
+          </button>
+          <button
+            type="button"
+            class="zoom-button"
+            title="Zoom in"
+            aria-label="Zoom in"
+            onclick={handleZoomIn}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            class="zoom-fit"
+            title="Fit to width"
+            onclick={handleFit}
+          >
+            Fit
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <template lwc:if={hasNodes}>
+      <div class="map-scroll">
+        <svg
+          class="map"
+          viewBox={viewBox}
+          style={svgStyle}
+          role="group"
+          aria-label="Org automation map"
+        >
+          <template lwc:if={showGridLabel}>
+            <text x="28" y={gridLabelY} class="grid-label">
+              OBJECTS WITHOUT CROSS-OBJECT WRITES
+            </text>
+          </template>
+          <template for:each={edges} for:item="edge">
+            <g key={edge.key} class={edge.className}>
+              <title>{edge.title}</title>
+              <path
+                d={edge.path}
+                class="edge-line"
+                stroke-width={edge.width}
+              ></path>
+              <polygon points={edge.head} class="edge-head"></polygon>
+            </g>
+          </template>
+          <template for:each={edges} for:item="edge">
+            <g key={edge.key} class={edge.className}>
+              <rect
+                x={edge.pillX}
+                y={edge.pillY}
+                width={edge.pillW}
+                height="16"
+                rx="8"
+                class="edge-pill"
+              ></rect>
+              <text
+                x={edge.labelX}
+                y={edge.labelY}
+                text-anchor="middle"
+                class="edge-label"
+              >
+                {edge.label}
+              </text>
+            </g>
+          </template>
+          <template for:each={nodes} for:item="node">
+            <g
+              key={node.key}
+              class={node.className}
+              data-key={node.dataKey}
+              tabindex={node.tabIndex}
+              role="button"
+              aria-label={node.ariaLabel}
+              onclick={handleNodeClick}
+              onkeydown={handleNodeKeydown}
+              onmouseenter={handleNodeEnter}
+              onmouseleave={handleNodeLeave}
+              onfocus={handleNodeEnter}
+              onblur={handleNodeLeave}
+            >
+              <title>{node.title}</title>
+              <rect
+                x={node.x}
+                y={node.y}
+                width={node.w}
+                height={node.h}
+                rx="12"
+                class="node-card"
+              ></rect>
+              <rect
+                x={node.barX}
+                y={node.barY}
+                width="4"
+                height={node.barH}
+                rx="2"
+                class="node-bar"
+              ></rect>
+              <text x={node.nameX} y={node.nameY} class="node-name">
+                {node.name}
+              </text>
+              <template for:each={node.counts} for:item="seg">
+                <g key={seg.key}>
+                  <template lwc:if={seg.hasDot}>
+                    <circle
+                      cx={seg.dotX}
+                      cy={node.dotY}
+                      r="3.5"
+                      style={seg.dotStyle}
+                    ></circle>
+                  </template>
+                  <text x={seg.textX} y={node.countY} class="node-count">
+                    {seg.text}
+                  </text>
+                </g>
+              </template>
+              <template for:each={node.status} for:item="seg">
+                <text
+                  key={seg.key}
+                  x={seg.x}
+                  y={node.statusY}
+                  class={seg.className}
+                >
+                  {seg.text}
+                </text>
+              </template>
+            </g>
+          </template>
+        </svg>
+      </div>
+      <ul class="legend">
+        <li><span class="line line-update"></span>updates records</li>
+        <li><span class="line line-create"></span>creates records</li>
+        <li><span class="line line-calls"></span>calls a flow</li>
+        <li><span class="line line-loop"></span>loop between objects</li>
+        <li><span class="box box-flow"></span>autolaunched flow</li>
+        <li><span class="box box-passive"></span>object with no automation</li>
+      </ul>
+    </template>
+    <template lwc:else>
+      <p class="muted empty">Nothing to draw.</p>
+    </template>
+  </article>
+</template>

@@ -1,0 +1,374 @@
+<template>
+  <div class="monitor">
+    <div class="toolbar">
+      <h2 class="page-title">
+        API Monitoring
+        <lightning-helptext
+          content="API calls logged by Org Intelligence and your integrations (OrgApiLogger), org API usage and alerts."
+        ></lightning-helptext>
+      </h2>
+      <div class="toolbar-actions">
+        <lightning-combobox
+          label="Period"
+          variant="label-hidden"
+          options={periods}
+          value={period}
+          onchange={handlePeriod}
+          class="period"
+        ></lightning-combobox>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <lightning-tabset variant="scoped">
+      <!-- Journal des appels -->
+      <lightning-tab label="API call log" value="log">
+        <template lwc:if={isLoadingLogs}>
+          <div class="loading" role="status">
+            <lightning-spinner
+              alternative-text="Loading the API log"
+              size="medium"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:elseif={logsError}>
+          <c-org-intel-error-panel
+            title="The API log could not be loaded"
+            error={logsError}
+            show-retry
+            onretry={handleRefresh}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:else>
+          <div class="kpis" role="group" aria-label="API call indicators">
+            <template for:each={kpis} for:item="kpi">
+              <div
+                key={kpi.key}
+                class={kpi.className}
+                role="button"
+                tabindex="0"
+                title={kpi.hint}
+                aria-pressed={kpi.pressed}
+                data-key={kpi.key}
+                onclick={handleKpi}
+                onkeydown={handleKpiKey}
+              >
+                <span class="kpi-label">{kpi.label}</span>
+                <span class="kpi-value">{kpi.value}</span>
+              </div>
+            </template>
+          </div>
+
+          <template lwc:if={hasLogs}>
+            <div class="systems" role="group" aria-label="Systems">
+              <template for:each={systemTabs} for:item="tab">
+                <button
+                  key={tab.key}
+                  type="button"
+                  class={tab.className}
+                  data-name={tab.name}
+                  aria-pressed={tab.pressed}
+                  onclick={handleSystem}
+                >
+                  <span class="dot" style={tab.dotStyle}></span>
+                  <span>{tab.label}</span>
+                  <span class="count">{tab.total}</span>
+                  <template lwc:if={tab.hasErrors}>
+                    <span class="count count-error" title="Errors"
+                      >{tab.errors}</span
+                    >
+                  </template>
+                </button>
+              </template>
+            </div>
+
+            <div class="filters">
+              <lightning-input
+                type="search"
+                label="Search"
+                variant="label-hidden"
+                placeholder="Search operation, endpoint, error, status, record…"
+                value={search}
+                onchange={handleSearch}
+                class="filter-search"
+              ></lightning-input>
+              <lightning-combobox
+                label="Status"
+                variant="label-hidden"
+                options={statusOptions}
+                value={status}
+                onchange={handleStatus}
+                class="filter-status"
+              ></lightning-combobox>
+              <span class="list-title">
+                {listTitle}
+                <template lwc:if={truncatedText}>
+                  <lightning-helptext
+                    content={truncatedText}
+                    icon-name="utility:warning"
+                  ></lightning-helptext>
+                </template>
+              </span>
+              <c-org-intel-export-menu
+                compact
+                disabled={noRows}
+                alternative-text="Export the calls shown"
+                onexport={handleExportLogs}
+              ></c-org-intel-export-menu>
+            </div>
+            <template lwc:if={hasRows}>
+              <lightning-datatable
+                key-field="id"
+                data={rows}
+                columns={columns}
+                hide-checkbox-column
+                sorted-by={sortBy}
+                sorted-direction={sortDirection}
+                onsort={handleSort}
+                onrowaction={handleRowAction}
+                wrap-text-max-lines="2"
+              ></lightning-datatable>
+            </template>
+            <template lwc:else>
+              <p class="card-empty">No call matches these filters.</p>
+            </template>
+          </template>
+          <template lwc:else>
+            <c-org-intel-empty-state
+              title="No API call in this period"
+              message="Org Intelligence calls are logged automatically; integrations can log theirs with OrgApiLogger."
+              icon-name="utility:api"
+            ></c-org-intel-empty-state>
+          </template>
+        </template>
+      </lightning-tab>
+
+      <!-- Consommation de l'org -->
+      <lightning-tab
+        label="Org API usage"
+        value="usage"
+        onactive={handleUsageTab}
+      >
+        <template lwc:if={isLoadingUsage}>
+          <div class="loading" role="status">
+            <lightning-spinner
+              alternative-text="Loading the API usage"
+              size="medium"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:elseif={usageError}>
+          <c-org-intel-error-panel
+            title="The API usage could not be loaded"
+            error={usageError}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:elseif={usage}>
+          <div class="usage">
+            <article class="card">
+              <header class="card-header">
+                <h3 class="card-title">Org limits (live)</h3>
+                <c-org-intel-export-menu
+                  compact
+                  disabled={noLimits}
+                  alternative-text="Export: Org limits (live)"
+                  data-sheet="limits"
+                  onexport={handleExportUsage}
+                ></c-org-intel-export-menu>
+              </header>
+              <ul class="limits">
+                <template for:each={limits} for:item="item">
+                  <li key={item.name} class="limit">
+                    <div class="limit-head">
+                      <span class="limit-label">{item.label}</span>
+                      <span class="limit-value"
+                        >{item.text} · {item.percentText}</span
+                      >
+                    </div>
+                    <div
+                      class="meter"
+                      role="meter"
+                      aria-label={item.label}
+                      aria-valuemin="0"
+                      aria-valuemax={item.max}
+                      aria-valuenow={item.used}
+                    >
+                      <div class={item.barClass} style={item.barStyle}></div>
+                    </div>
+                  </li>
+                </template>
+              </ul>
+            </article>
+
+            <template lwc:if={usage.loginHistoryAvailable}>
+              <div class="kpis kpis-small" role="group" aria-label="API logins">
+                <template for:each={loginKpis} for:item="kpi">
+                  <div
+                    key={kpi.key}
+                    class={kpi.className}
+                    role="button"
+                    tabindex="0"
+                    title={kpi.hint}
+                    data-target={kpi.target}
+                    onclick={handleLoginKpi}
+                    onkeydown={handleLoginKpiKey}
+                  >
+                    <span class="kpi-label">{kpi.label}</span>
+                    <span class="kpi-value">{kpi.value}</span>
+                  </div>
+                </template>
+              </div>
+              <div class="grid-two">
+                <article class="card" data-anchor="applications">
+                  <header class="card-header">
+                    <h3 class="card-title">
+                      API logins by application
+                      <lightning-helptext
+                        content="Login history covers API logins (OAuth, SOAP, CLI…); browser logins are excluded. Per-call API usage requires Event Monitoring."
+                      ></lightning-helptext>
+                    </h3>
+                    <c-org-intel-export-menu
+                      compact
+                      disabled={noApplications}
+                      alternative-text="Export: API logins by application"
+                      data-sheet="applications"
+                      onexport={handleExportUsage}
+                    ></c-org-intel-export-menu>
+                  </header>
+                  <div class="am-table-scroll">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Application</th>
+                          <th scope="col">Status</th>
+                          <th scope="col" class="num">Logins</th>
+                          <th scope="col">Last</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template for:each={applications} for:item="item">
+                          <tr key={item.key}>
+                            <td>
+                              {item.name}<span class="muted block"
+                                >{item.loginType}</span
+                              >
+                            </td>
+                            <td>
+                              <template lwc:if={item.isFailure}>
+                                <c-org-intel-badge
+                                  label={item.status}
+                                  tone="critical"
+                                ></c-org-intel-badge>
+                              </template>
+                              <template lwc:else>{item.status}</template>
+                            </td>
+                            <td class="num">{item.count}</td>
+                            <td>{item.last}</td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+                <article class="card">
+                  <header class="card-header">
+                    <h3 class="card-title">Top API users</h3>
+                    <c-org-intel-export-menu
+                      compact
+                      disabled={noUsers}
+                      alternative-text="Export: Top API users"
+                      data-sheet="users"
+                      onexport={handleExportUsage}
+                    ></c-org-intel-export-menu>
+                  </header>
+                  <div class="am-table-scroll">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th scope="col">User</th>
+                          <th scope="col" class="num">Logins</th>
+                          <th scope="col">Last</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template for:each={users} for:item="item">
+                          <tr key={item.userId}>
+                            <td>
+                              {item.name}<span class="muted block"
+                                >{item.detail}</span
+                              >
+                            </td>
+                            <td class="num">{item.count}</td>
+                            <td>{item.last}</td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+              </div>
+              <article class="card" data-anchor="failures">
+                <header class="card-header">
+                  <h3 class="card-title">Failed logins</h3>
+                  <c-org-intel-export-menu
+                    compact
+                    disabled={noFailures}
+                    alternative-text="Export: Failed logins"
+                    data-sheet="failures"
+                    onexport={handleExportUsage}
+                  ></c-org-intel-export-menu>
+                </header>
+                <template lwc:if={hasFailures}>
+                  <div class="am-table-scroll">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th scope="col">When</th>
+                          <th scope="col">User</th>
+                          <th scope="col">Application</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Source IP</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template for:each={failures} for:item="item">
+                          <tr key={item.key}>
+                            <td>{item.when}</td>
+                            <td>{item.userName}</td>
+                            <td>
+                              {item.application}<span class="muted block"
+                                >{item.loginType}</span
+                              >
+                            </td>
+                            <td class="error">{item.status}</td>
+                            <td>{item.sourceIp}</td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+                <template lwc:else>
+                  <p class="card-empty">No failed login in this period.</p>
+                </template>
+              </article>
+            </template>
+            <template lwc:else>
+              <p class="notice">{usage.loginHistoryMessage}</p>
+            </template>
+          </div>
+        </template>
+      </lightning-tab>
+
+      <!-- Alertes -->
+      <lightning-tab label="Alerts" value="alerts">
+        <c-org-intel-api-alerts period={period}></c-org-intel-api-alerts>
+      </lightning-tab>
+    </lightning-tabset>
+  </div>
+</template>

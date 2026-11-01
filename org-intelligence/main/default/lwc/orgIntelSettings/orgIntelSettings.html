@@ -1,0 +1,955 @@
+<template>
+  <div class="settings">
+    <div class="toolbar">
+      <div>
+        <h2 class="page-title">
+          Settings
+          <lightning-helptext
+            content="Saved immediately for every user."
+          ></lightning-helptext>
+        </h2>
+      </div>
+      <div class="toolbar-actions">
+        <lightning-button-icon
+          icon-name={toggleAllIcon}
+          alternative-text={toggleAllLabel}
+          title={toggleAllLabel}
+          onclick={handleToggleAll}
+        ></lightning-button-icon>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the settings"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The settings could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:else>
+      <!-- Navigation compacte entre les sections -->
+      <nav class="section-nav" aria-label="Settings sections">
+        <template for:each={navItems} for:item="item">
+          <button
+            key={item.key}
+            type="button"
+            class={item.className}
+            data-section={item.key}
+            onclick={handleNavClick}
+          >
+            <template lwc:if={item.dotClass}>
+              <span class={item.dotClass}></span>
+            </template>
+            {item.label}
+            <template lwc:if={item.count}>
+              <span class="nav-count">{item.count}</span>
+            </template>
+          </button>
+        </template>
+      </nav>
+
+      <!-- Tooling API -->
+      <article class="card" data-section-id="tooling">
+        <header class="card-header">
+          <div class="card-heading">
+            <h3 class="card-title">
+              <button
+                type="button"
+                class="section-toggle"
+                data-section="tooling"
+                aria-expanded={section.tooling.expanded}
+                onclick={handleToggleSection}
+              >
+                <lightning-icon
+                  icon-name={section.tooling.icon}
+                  size="xx-small"
+                ></lightning-icon>
+                Tooling API connection
+              </button>
+              <lightning-helptext
+                content="Needed for validation rules, dependencies and code coverage. Calls run with the permissions of each user (per-user principal). Without it the scanner works in degraded mode and says so in its log."
+              ></lightning-helptext>
+            </h3>
+          </div>
+          <c-org-intel-badge
+            label={toolingLabel}
+            tone={toolingTone}
+          ></c-org-intel-badge>
+        </header>
+        <template lwc:if={section.tooling.open}>
+          <p class="status-line">{tooling.message}</p>
+          <div class="tooling-actions">
+            <template lwc:if={toolingNotConfigured}>
+              <lightning-button
+                label="Set up automatically"
+                variant="brand"
+                icon-name="utility:magicwand"
+                onclick={handleToolingSetup}
+              ></lightning-button>
+            </template>
+            <template lwc:if={toolingNeedsAccess}>
+              <lightning-button
+                label="Connect"
+                variant="brand"
+                icon-name="utility:link"
+                onclick={handleAllowAccess}
+              ></lightning-button>
+            </template>
+            <lightning-button
+              label="Test the connection"
+              icon-name="utility:refresh"
+              onclick={handleRefresh}
+            ></lightning-button>
+          </div>
+          <template lwc:if={toolingNeedsAccess}>
+            <p class="muted block">
+              If “Connect” fails: personal settings › External Credentials ›
+              “Org Intelligence Tooling” › Allow Access, then test the
+              connection here.
+            </p>
+          </template>
+          <template lwc:if={showGuide}>
+            <details class="disclosure">
+              <summary>Manual setup (6 steps)</summary>
+              <ol class="guide">
+                <li>
+                  <strong>External Client App</strong> — Setup › External Client
+                  App Manager › New. OAuth enabled, callback URL
+                  <code>{callbackUrl}</code>, scopes
+                  <em>Manage user data via APIs (api)</em> and
+                  <em
+                    >Perform requests at any time (refresh_token,
+                    offline_access)</em
+                  >. Keep the consumer key and secret.
+                </li>
+                <li>
+                  <strong>Auth. Provider</strong> — Setup › Auth. Providers ›
+                  New › Salesforce. URL suffix
+                  <code>{settings.retention.namedCredential}</code>, consumer
+                  key and secret from step 1, default scopes
+                  <code>api refresh_token</code>.
+                </li>
+                <li>
+                  <strong>External Credential</strong> — Setup › Named
+                  Credentials › External Credentials › New. Protocol OAuth 2.0,
+                  Browser Flow, the Auth. Provider of step 2. Add a principal of
+                  type <em>Per User Principal</em>.
+                </li>
+                <li>
+                  <strong>Named Credential</strong> — Named Credentials › New.
+                  Name <code>{settings.retention.namedCredential}</code>, URL
+                  <code>{settings.orgDomainUrl}</code>, the External Credential
+                  of step 3, “Generate Authorization Header” checked.
+                </li>
+                <li>
+                  <strong>Access</strong> — In the “Org Intelligence - Admin”
+                  permission set, add the principal under External Credential
+                  Principal Access.
+                </li>
+                <li>
+                  <strong>Authenticate</strong> — Each administrator: avatar ›
+                  Settings › External Credentials › Allow access. Then test the
+                  connection here.
+                </li>
+              </ol>
+              <p class="muted">
+                <a href={installGuideUrl} target="_blank" rel="noopener"
+                  >Full guide</a
+                >
+              </p>
+            </details>
+          </template>
+        </template>
+      </article>
+
+      <!-- Modules -->
+      <article class="card" data-section-id="modules">
+        <header class="card-header">
+          <div class="card-heading">
+            <h3 class="card-title">
+              <button
+                type="button"
+                class="section-toggle"
+                data-section="modules"
+                aria-expanded={section.modules.expanded}
+                onclick={handleToggleSection}
+              >
+                <lightning-icon
+                  icon-name={section.modules.icon}
+                  size="xx-small"
+                ></lightning-icon>
+                Modules
+              </button>
+              <lightning-helptext
+                content="The core (scanner, automation, storage, reports) is always installed. Optional modules add screens; only collaborative Recommendations and API Monitoring store records in the org. Install only the ones you need, at any time."
+              ></lightning-helptext>
+            </h3>
+            <a
+              class="header-link"
+              href={installGuideUrl}
+              target="_blank"
+              rel="noopener"
+              >Installation guide</a
+            >
+          </div>
+          <lightning-button
+            label="Manage modules"
+            icon-name="utility:apps"
+            onclick={handleManageModules}
+          ></lightning-button>
+        </header>
+        <template lwc:if={section.modules.open}>
+          <ul class="module-list">
+            <template for:each={moduleRows} for:item="module">
+              <li key={module.key} class="module-row">
+                <span class="module-name">{module.label}</span>
+                <lightning-helptext
+                  content={module.helpText}
+                ></lightning-helptext>
+                <c-org-intel-badge
+                  label={module.statusLabel}
+                  tone={module.statusTone}
+                ></c-org-intel-badge>
+              </li>
+            </template>
+          </ul>
+        </template>
+      </article>
+
+      <template lwc:if={hasRecommendations}>
+        <!-- Jira -->
+        <article class="card" data-section-id="jira">
+          <header class="card-header">
+            <div class="card-heading">
+              <h3 class="card-title">
+                <button
+                  type="button"
+                  class="section-toggle"
+                  data-section="jira"
+                  aria-expanded={section.jira.expanded}
+                  onclick={handleToggleSection}
+                >
+                  <lightning-icon
+                    icon-name={section.jira.icon}
+                    size="xx-small"
+                  ></lightning-icon>
+                  Jira
+                </button>
+                <lightning-helptext
+                  content="Export selected recommendations as Jira issues. The API token is stored encrypted by Salesforce and is never displayed again."
+                ></lightning-helptext>
+              </h3>
+            </div>
+            <c-org-intel-badge
+              label={jiraLabel}
+              tone={jiraTone}
+            ></c-org-intel-badge>
+          </header>
+          <template lwc:if={section.jira.open}>
+            <template lwc:if={jiraStatus}>
+              <p class="status-line">{jiraStatus.message}</p>
+            </template>
+            <div class="jira-grid">
+              <lightning-input
+                label="Jira site"
+                placeholder="https://your-site.atlassian.net"
+                value={jiraDraft.siteUrl}
+                data-field="siteUrl"
+                onchange={handleJiraField}
+              ></lightning-input>
+              <lightning-input
+                label="Project key"
+                placeholder="ORG"
+                value={jiraDraft.projectKey}
+                data-field="projectKey"
+                onchange={handleJiraField}
+              ></lightning-input>
+              <lightning-input
+                label="Account e-mail"
+                type="email"
+                placeholder={jiraEmailPlaceholder}
+                value={jiraDraft.email}
+                data-field="email"
+                onchange={handleJiraField}
+              ></lightning-input>
+              <lightning-input
+                label="API token"
+                type="password"
+                placeholder={jiraTokenPlaceholder}
+                value={jiraDraft.apiToken}
+                data-field="apiToken"
+                onchange={handleJiraField}
+                field-level-help="Create it at id.atlassian.com › Security › API tokens."
+              ></lightning-input>
+              <lightning-input
+                label="Issue type"
+                placeholder="Task"
+                value={jiraDraft.issueType}
+                data-field="issueType"
+                onchange={handleJiraField}
+              ></lightning-input>
+            </div>
+            <div class="actions">
+              <lightning-button
+                variant="brand"
+                label={jiraSaveLabel}
+                disabled={isSavingJira}
+                onclick={handleSaveJira}
+              ></lightning-button>
+              <lightning-button
+                label={jiraTestLabel}
+                icon-name="utility:refresh"
+                disabled={jiraTestDisabled}
+                onclick={handleTestJira}
+              ></lightning-button>
+            </div>
+          </template>
+        </article>
+      </template>
+
+      <!-- Score de santé -->
+      <article class="card" data-section-id="score">
+        <header class="card-header">
+          <div class="card-heading">
+            <h3 class="card-title">
+              <button
+                type="button"
+                class="section-toggle"
+                data-section="score"
+                aria-expanded={section.score.expanded}
+                onclick={handleToggleSection}
+              >
+                <lightning-icon
+                  icon-name={section.score.icon}
+                  size="xx-small"
+                ></lightning-icon>
+                Health score preferences
+              </button>
+              <lightning-helptext
+                content="How much each finding weighs. The same settings apply to every user and to the next scans; saving also recalculates the latest scan stored in this browser."
+              ></lightning-helptext>
+            </h3>
+          </div>
+          <template lwc:if={scoreDirty}>
+            <c-org-intel-badge
+              label="Unsaved changes"
+              tone="warning"
+            ></c-org-intel-badge>
+          </template>
+        </header>
+        <template lwc:if={section.score.open}>
+          <div class="score-layout">
+            <div>
+              <div class="presets" role="radiogroup" aria-label="Preset">
+                <template for:each={presetOptions} for:item="preset">
+                  <button
+                    key={preset.value}
+                    type="button"
+                    role="radio"
+                    class={preset.className}
+                    aria-checked={preset.checked}
+                    data-value={preset.value}
+                    onclick={handlePreset}
+                  >
+                    {preset.label}
+                  </button>
+                </template>
+              </div>
+              <table class="table score-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Severity</th>
+                    <th scope="col">Points per finding</th>
+                    <th scope="col">Max points per rule</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template for:each={scoreRows} for:item="row">
+                    <tr key={row.value}>
+                      <td>
+                        <c-org-intel-badge
+                          label={row.label}
+                          tone={row.tone}
+                        ></c-org-intel-badge>
+                      </td>
+                      <td>
+                        <lightning-input
+                          type="number"
+                          label="Points per finding"
+                          variant="label-hidden"
+                          min="0"
+                          max="100"
+                          step="0.25"
+                          value={row.points}
+                          data-severity={row.value}
+                          data-kind="points"
+                          onchange={handleScoreValue}
+                        ></lightning-input>
+                      </td>
+                      <td>
+                        <lightning-input
+                          type="number"
+                          label="Max points per rule"
+                          variant="label-hidden"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={row.cap}
+                          data-severity={row.value}
+                          data-kind="caps"
+                          onchange={handleScoreValue}
+                        ></lightning-input>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <div class="score-side">
+              <fieldset class="domains">
+                <legend class="label">Domains counted</legend>
+                <template for:each={domainOptions} for:item="domain">
+                  <label key={domain.value} class="check">
+                    <input
+                      type="checkbox"
+                      data-value={domain.value}
+                      checked={domain.checked}
+                      onchange={handleScoreDomain}
+                    />
+                    <span>{domain.label}</span>
+                  </label>
+                </template>
+              </fieldset>
+              <lightning-input
+                type="toggle"
+                label="Ignored recommendations do not count"
+                checked={scoreDraft.excludeIgnored}
+                message-toggle-active=""
+                message-toggle-inactive=""
+                onchange={handleExcludeIgnored}
+              ></lightning-input>
+              <template lwc:if={hasPreview}>
+                <div class="preview">
+                  <div class="browser-head">
+                    <span class="label">Preview on {previewScanName}</span>
+                    <c-org-intel-browser-badge
+                      help="The preview uses the latest scan stored in this browser."
+                    ></c-org-intel-browser-badge>
+                  </div>
+                  <div class="preview-line">
+                    <span class="preview-old">{currentScoreLabel}</span>
+                    <lightning-icon
+                      icon-name="utility:forward"
+                      size="xx-small"
+                    ></lightning-icon>
+                    <span class="preview-value">{previewScore}</span>
+                    <span class="muted">/ 100</span>
+                    <c-org-intel-badge
+                      label={previewBand.label}
+                      tone={previewBand.tone}
+                    ></c-org-intel-badge>
+                  </div>
+                </div>
+              </template>
+              <div class="actions">
+                <lightning-button
+                  variant="brand"
+                  label="Save preferences"
+                  disabled={scoreSaveDisabled}
+                  onclick={handleSaveScore}
+                ></lightning-button>
+                <lightning-button
+                  variant="base"
+                  label="Cancel changes"
+                  disabled={scoreSaveDisabled}
+                  onclick={handleResetScore}
+                ></lightning-button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </article>
+
+      <!-- Règles -->
+      <article class="card" data-section-id="rules">
+        <header class="card-header">
+          <div class="card-heading">
+            <h3 class="card-title">
+              <button
+                type="button"
+                class="section-toggle"
+                data-section="rules"
+                aria-expanded={section.rules.expanded}
+                onclick={handleToggleSection}
+              >
+                <lightning-icon
+                  icon-name={section.rules.icon}
+                  size="xx-small"
+                ></lightning-icon>
+                Rule catalog
+              </button>
+              <lightning-helptext
+                content="Changes apply from the next scan; recommendations already created keep their decisions. Severity and threshold are saved per rule through the Metadata API."
+              ></lightning-helptext>
+            </h3>
+            <span class="muted">{ruleSummary}</span>
+          </div>
+          <template lwc:if={section.rules.open}>
+            <div class="header-tools">
+              <lightning-input
+                type="search"
+                label="Filter rules"
+                variant="label-hidden"
+                placeholder="Filter rules…"
+                value={ruleFilter}
+                onchange={handleRuleFilter}
+                class="rule-filter"
+              ></lightning-input>
+              <c-org-intel-export-menu
+                compact
+                alternative-text="Export the rules shown"
+                onexport={handleExportRules}
+              ></c-org-intel-export-menu>
+            </div>
+          </template>
+        </header>
+        <template lwc:if={section.rules.open}>
+          <div class="rules-wrap">
+            <table class="table rules">
+              <thead>
+                <tr>
+                  <th scope="col">On</th>
+                  <th scope="col">Rule</th>
+                  <th scope="col">Area</th>
+                  <th scope="col">Severity</th>
+                  <th scope="col">Threshold</th>
+                  <th scope="col" class="num">Open recs</th>
+                  <th scope="col"><span class="assistive">Save</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template for:each={rules} for:item="rule">
+                  <tr key={rule.code} class={rule.rowClass}>
+                    <td>
+                      <lightning-input
+                        type="toggle"
+                        label="Enabled"
+                        variant="label-hidden"
+                        data-code={rule.code}
+                        checked={rule.enabled}
+                        message-toggle-active=""
+                        message-toggle-inactive=""
+                        onchange={handleRuleEnabled}
+                      ></lightning-input>
+                    </td>
+                    <td class="rule-name">
+                      <span class="rule-label">{rule.label}</span>
+                      <template lwc:if={rule.description}>
+                        <lightning-helptext
+                          content={rule.description}
+                        ></lightning-helptext>
+                      </template>
+                      <template lwc:if={rule.needsTooling}
+                        ><span class="tag">Tooling API</span></template
+                      >
+                      <code class="rule-code block">{rule.code}</code>
+                    </td>
+                    <td>
+                      {rule.domainLabel}<span class="muted block"
+                        >{rule.category} · {rule.confidence}</span
+                      >
+                    </td>
+                    <td class="severity">
+                      <lightning-combobox
+                        label="Severity"
+                        variant="label-hidden"
+                        options={severityOptions}
+                        value={rule.severity}
+                        data-code={rule.code}
+                        dropdown-alignment="auto"
+                        onchange={handleRuleSeverity}
+                      ></lightning-combobox>
+                    </td>
+                    <td class="threshold">
+                      <template lwc:if={rule.hasThreshold}>
+                        <lightning-input
+                          type="number"
+                          label="Threshold"
+                          variant="label-hidden"
+                          value={rule.threshold}
+                          data-code={rule.code}
+                          step="0.5"
+                          onchange={handleRuleThreshold}
+                        ></lightning-input>
+                      </template>
+                      <template lwc:else><span class="muted">—</span></template>
+                    </td>
+                    <td class="num">{rule.openRecommendations}</td>
+                    <td>
+                      <lightning-button
+                        label="Save"
+                        variant="brand"
+                        data-code={rule.code}
+                        disabled={rule.saveDisabled}
+                        onclick={handleSaveRule}
+                      ></lightning-button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </article>
+
+      <div class="grid-two">
+        <!-- Journal API (module API Monitoring) -->
+        <template lwc:if={hasApiMonitoring}>
+          <article class="card" data-section-id="retention">
+            <header class="card-header">
+              <div class="card-heading">
+                <h3 class="card-title">
+                  <button
+                    type="button"
+                    class="section-toggle"
+                    data-section="retention"
+                    aria-expanded={section.retention.expanded}
+                    onclick={handleToggleSection}
+                  >
+                    <lightning-icon
+                      icon-name={section.retention.icon}
+                      size="xx-small"
+                    ></lightning-icon>
+                    API log
+                  </button>
+                  <lightning-helptext
+                    content="How long the API log is kept in the org, and whether request and response extracts are stored. “Run maintenance now” deletes the older entries."
+                  ></lightning-helptext>
+                </h3>
+              </div>
+            </header>
+            <template lwc:if={section.retention.open}>
+              <div class="form">
+                <lightning-input
+                  type="number"
+                  label="Keep the API log (days)"
+                  min="1"
+                  max="3650"
+                  data-field="apiLogRetentionDays"
+                  value={retentionDraft.apiLogRetentionDays}
+                  onchange={handleRetentionChange}
+                ></lightning-input>
+                <lightning-input
+                  type="toggle"
+                  label="Store request and response extracts in the API log (secrets masked)"
+                  data-field="logApiPayloads"
+                  checked={retentionDraft.logApiPayloads}
+                  message-toggle-active="Yes"
+                  message-toggle-inactive="No"
+                  onchange={handleRetentionChange}
+                ></lightning-input>
+                <div class="actions">
+                  <lightning-button
+                    variant="brand"
+                    label="Save"
+                    disabled={retentionSaveDisabled}
+                    onclick={handleSaveRetention}
+                  ></lightning-button>
+                  <lightning-button
+                    label="Run maintenance now"
+                    icon-name="utility:delete"
+                    disabled={isRunningMaintenance}
+                    onclick={handleRunMaintenance}
+                  ></lightning-button>
+                </div>
+                <template lwc:if={maintenanceResult}>
+                  <p class="notice">{maintenanceResult}</p>
+                </template>
+              </div>
+            </template>
+          </article>
+        </template>
+
+        <!-- Données : volumes des modules à objets et données du navigateur -->
+        <article class="card" data-section-id="data">
+          <header class="card-header">
+            <div class="card-heading">
+              <h3 class="card-title">
+                <button
+                  type="button"
+                  class="section-toggle"
+                  data-section="data"
+                  aria-expanded={section.data.expanded}
+                  onclick={handleToggleSection}
+                >
+                  <lightning-icon
+                    icon-name={section.data.icon}
+                    size="xx-small"
+                  ></lightning-icon>
+                  Data
+                </button>
+                <lightning-helptext
+                  content="Records stored in the org belong to the optional modules (collaborative recommendations, API log). Everything else stays in each user's browser."
+                ></lightning-helptext>
+              </h3>
+            </div>
+          </header>
+          <template lwc:if={section.data.open}>
+            <div class="volume-head">
+              <div class="browser-head">
+                <c-org-intel-browser-badge
+                  help={browserBadgeHelp}
+                ></c-org-intel-browser-badge>
+                <span class="stored-note">{browserBackendLabel}</span>
+              </div>
+              <span class="muted">{browserTotalText}</span>
+            </div>
+            <template lwc:if={storageProtectionMessage}>
+              <p class="muted block">{storageProtectionMessage}</p>
+            </template>
+            <div class="actions">
+              <c-org-intel-data-menu
+                kind="browserData"
+                allow-clear
+                disable-save={isBrowserBusy}
+                save-label="Save everything to a file (JSON)"
+                clear-label="Clear browser data"
+                clear-message="Scans, audits, analyses and local recommendations stored in this browser will be deleted. Save them to a file first if you want to keep them."
+                onsave={handleExportBrowserData}
+                onopen={handleImportBrowserData}
+                onclear={handleClearBrowserData}
+                onerror={handleBrowserDataError}
+              ></c-org-intel-data-menu>
+              <lightning-button
+                variant="base"
+                label="Clean up"
+                icon-name="utility:broom"
+                title="Delete the analyses of objects that no longer exist, analyses interrupted more than 7 days ago and old-format entries"
+                disabled={isBrowserBusy}
+                onclick={handleCleanBrowserData}
+              ></lightning-button>
+            </div>
+            <template lwc:if={hasBrowserData}>
+              <ul class="volumes">
+                <template for:each={browserRows} for:item="row">
+                  <li key={row.key}>
+                    <span>{row.label}</span>
+                    <span class="volume-value">{row.value}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+
+            <template lwc:if={hasVolumes}>
+              <div class="volume-head">
+                <h4 class="label">Records in the org</h4>
+                <c-org-intel-export-menu
+                  compact
+                  alternative-text="Export the data volume"
+                  onexport={handleExportVolumes}
+                ></c-org-intel-export-menu>
+              </div>
+              <ul class="volumes">
+                <template for:each={volumes} for:item="row">
+                  <li key={row.label}>
+                    <span>{row.label}</span>
+                    <span class="volume-value">{row.value}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+          </template>
+        </article>
+      </div>
+
+      <!-- Accès -->
+      <article class="card" data-section-id="access">
+        <header class="card-header">
+          <div class="card-heading">
+            <h3 class="card-title">
+              <button
+                type="button"
+                class="section-toggle"
+                data-section="access"
+                aria-expanded={section.access.expanded}
+                onclick={handleToggleSection}
+              >
+                <lightning-icon
+                  icon-name={section.access.icon}
+                  size="xx-small"
+                ></lightning-icon>
+                Access
+              </button>
+              <lightning-helptext
+                content="Access is granted only through the “Org Intelligence - Admin” and “Org Intelligence - User” permission sets (Setup › Permission Sets), plus those of each module."
+              ></lightning-helptext>
+            </h3>
+            <span class="muted"
+              >{adminCount} admin(s) · {userCount} user(s)</span
+            >
+          </div>
+          <c-org-intel-export-menu
+            compact
+            alternative-text="Export the access list"
+            onexport={handleExportAccess}
+          ></c-org-intel-export-menu>
+        </header>
+        <template lwc:if={section.access.open}>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Permission set</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template for:each={accessRows} for:item="row">
+                  <tr key={row.key}>
+                    <td>{row.userName}</td>
+                    <td>{row.permissionSet}</td>
+                    <td>{row.statusLabel}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </article>
+
+      <!-- Désinstallation -->
+      <article
+        class="card card-danger"
+        data-id="uninstall"
+        data-section-id="uninstall"
+      >
+        <header class="card-header">
+          <div class="card-heading">
+            <h3 class="card-title">
+              Uninstall Org Intelligence
+              <lightning-helptext
+                content="Removes the core, every installed module and the records they keep in the org (collaborative recommendations, API log and alerts, settings, Tooling connection). Scans, audits and analyses live in each user's browser: clear them in Settings › Browser data. Nothing else in the org is touched."
+              ></lightning-helptext>
+            </h3>
+          </div>
+          <template lwc:if={showUninstallStart}>
+            <lightning-button
+              label="Uninstall..."
+              variant="destructive-text"
+              icon-name="utility:delete"
+              onclick={handleUninstallCheck}
+              disabled={uninstallLoading}
+            ></lightning-button>
+          </template>
+        </header>
+
+        <template lwc:if={hasUninstallTool}>
+          <template lwc:if={uninstallLoading}>
+            <p class="status-line">
+              Checking how Org Intelligence is installed...
+            </p>
+          </template>
+
+          <template lwc:if={uninstallStatus}>
+            <template lwc:if={uninstallIsPackage}>
+              <p class="status-line">
+                Org Intelligence is installed as packages
+                ({uninstallPackagesText}). Uninstall the modules first, then the
+                core package, from
+                <a href={installedPackagesUrl} target="_blank" rel="noopener"
+                  >Setup &gt; Installed Packages</a
+                >.
+              </p>
+            </template>
+            <template lwc:elseif={uninstallStatus.canUninstall}>
+              <template lwc:if={uninstallNotStarted}>
+                <div class="uninstall-form">
+                  <p>
+                    <strong>This cannot be undone.</strong>
+                    {uninstallStatus.componentCount} components and their data
+                    will be deleted from
+                    <strong>{uninstallStatus.orgName}</strong>. Your permission
+                    sets are removed and the app disappears about a minute
+                    later.
+                  </p>
+                  <lightning-input
+                    type="checkbox"
+                    label="Also remove the Tooling API connection (External Client App, credentials, permission set)"
+                    checked={removeToolingConnection}
+                    onchange={handleRemoveToolingChange}
+                  ></lightning-input>
+                  <lightning-input
+                    label={uninstallConfirmLabel}
+                    value={uninstallConfirmText}
+                    onchange={handleUninstallConfirmChange}
+                  ></lightning-input>
+                  <div class="uninstall-actions">
+                    <lightning-button
+                      label="Cancel"
+                      onclick={handleUninstallCancel}
+                    ></lightning-button>
+                    <lightning-button
+                      label="Uninstall Org Intelligence"
+                      variant="destructive"
+                      icon-name="utility:delete"
+                      disabled={uninstallDisabled}
+                      onclick={handleUninstall}
+                    ></lightning-button>
+                  </div>
+                </div>
+              </template>
+              <template lwc:else>
+                <p class="status-line" role="status">{uninstallProgressText}</p>
+                <template for:each={uninstallProblems} for:item="problem">
+                  <p key={problem} class="status-line uninstall-problem">
+                    {problem}
+                  </p>
+                </template>
+                <p class="muted">
+                  Follow the deletion in
+                  <a href={deploymentStatusUrl} target="_blank" rel="noopener"
+                    >Setup &gt; Deployment Status</a
+                  >.
+                </p>
+              </template>
+            </template>
+            <template lwc:else>
+              <p class="status-line">{uninstallStatus.reason}</p>
+              <p class="muted">
+                Command line alternative, from the project folder:
+                <code
+                  >node scripts/uninstall.mjs --target-org &lt;alias&gt;</code
+                >
+              </p>
+            </template>
+          </template>
+        </template>
+        <template lwc:else>
+          <p class="status-line">
+            Uninstall the modules first, then the core package, from
+            <a href={installedPackagesUrl} target="_blank" rel="noopener"
+              >Setup &gt; Installed Packages</a
+            >. Installed from the source code? Run
+            <code>node scripts/uninstall.mjs --target-org &lt;alias&gt;</code>.
+          </p>
+        </template>
+      </article>
+    </template>
+  </div>
+</template>

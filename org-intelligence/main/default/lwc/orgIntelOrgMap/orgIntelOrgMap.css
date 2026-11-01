@@ -1,0 +1,378 @@
+:host {
+  display: block;
+  --au-flow: #7c5cdb;
+  --au-create: #12a150;
+  --au-update: var(--oi-low);
+  --au-loop: var(--oi-critical);
+}
+
+.card {
+  padding: 0.5rem 0.75rem 0.625rem;
+  background: var(--oi-surface);
+  border: 1px solid var(--oi-border);
+  border-radius: var(--oi-radius);
+  box-shadow: var(--oi-shadow);
+}
+
+.map-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Titre et résumé sur une ligne */
+.map-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5rem;
+}
+
+.card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--oi-text);
+}
+
+.muted {
+  font-size: 0.75rem;
+  color: var(--oi-text-muted);
+}
+
+.empty {
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.map-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.map-search {
+  width: 14rem;
+}
+
+.zoom {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--oi-border-strong);
+  border-radius: 8px;
+  background: var(--oi-surface);
+}
+
+.zoom button {
+  height: 2rem;
+  padding: 0 0.625rem;
+  border: 0;
+  border-left: 1px solid var(--oi-border);
+  background: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--oi-text);
+  cursor: pointer;
+}
+
+.zoom button:first-child {
+  border-left: 0;
+}
+
+.zoom button:hover {
+  background: var(--oi-hover);
+}
+
+.zoom button:focus-visible {
+  outline: 2px solid var(--oi-accent);
+  outline-offset: -2px;
+}
+
+.zoom-button {
+  font-size: 1rem;
+}
+
+.zoom-value {
+  min-width: 3.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-scroll {
+  overflow: auto;
+  max-height: 46rem;
+  border-radius: 10px;
+  border: 1px solid var(--oi-border);
+  background-color: var(--oi-surface-muted);
+  background-image: radial-gradient(var(--oi-border) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.map {
+  display: block;
+  height: auto;
+  margin: 0 auto;
+}
+
+.grid-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  fill: var(--oi-text-muted);
+}
+
+/* Arêtes */
+.edge {
+  transition: opacity 0.15s ease;
+}
+
+.edge-line {
+  fill: none;
+  stroke: var(--au-update);
+  stroke-opacity: 0.8;
+}
+
+.edge-head {
+  fill: var(--au-update);
+}
+
+.edge-create .edge-line {
+  stroke: var(--au-create);
+}
+
+.edge-create .edge-head {
+  fill: var(--au-create);
+}
+
+.edge-calls .edge-line {
+  stroke: var(--au-flow);
+  stroke-dasharray: 6 4;
+}
+
+.edge-calls .edge-head {
+  fill: var(--au-flow);
+}
+
+.edge-delete .edge-line {
+  stroke: var(--oi-neutral);
+  stroke-dasharray: 3 3;
+}
+
+.edge-delete .edge-head {
+  fill: var(--oi-neutral);
+}
+
+.edge-back .edge-line {
+  stroke-dasharray: 6 4;
+}
+
+.edge-loop .edge-line {
+  stroke: var(--au-loop);
+  stroke-opacity: 1;
+}
+
+.edge-loop .edge-head {
+  fill: var(--au-loop);
+}
+
+.edge.is-active .edge-line {
+  stroke-opacity: 1;
+  stroke-width: 3;
+}
+
+.edge-pill {
+  fill: var(--oi-surface);
+  stroke: var(--au-update);
+  stroke-width: 1;
+}
+
+.edge-create .edge-pill {
+  stroke: var(--au-create);
+}
+
+.edge-calls .edge-pill {
+  stroke: var(--au-flow);
+}
+
+.edge-loop .edge-pill {
+  stroke: var(--au-loop);
+}
+
+.edge-label {
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--au-update);
+}
+
+.edge-create .edge-label {
+  fill: var(--au-create);
+}
+
+.edge-calls .edge-label {
+  fill: var(--au-flow);
+}
+
+.edge-loop .edge-label {
+  fill: var(--au-loop);
+}
+
+/* Nœuds */
+.node {
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.15s ease;
+}
+
+.node-card {
+  fill: var(--oi-surface);
+  stroke: var(--oi-border-strong);
+  stroke-width: 1.25;
+  filter: drop-shadow(0 1px 2px rgba(16, 24, 40, 0.08));
+  transition: stroke 0.12s ease;
+}
+
+.node-bar {
+  fill: var(--oi-accent);
+}
+
+.node-flow .node-card {
+  stroke: var(--au-flow);
+  stroke-dasharray: 5 3;
+}
+
+.node-flow .node-bar {
+  fill: var(--au-flow);
+}
+
+.node-flow {
+  cursor: default;
+}
+
+.node-passive {
+  cursor: default;
+}
+
+.node-passive .node-card {
+  fill: var(--oi-surface-muted);
+  stroke-dasharray: 5 3;
+}
+
+.node-passive .node-bar {
+  fill: var(--oi-border-strong);
+}
+
+.node-loop .node-card {
+  stroke: var(--au-loop);
+  stroke-width: 2;
+}
+
+.node.is-hover .node-card,
+.node:focus-visible .node-card {
+  stroke: var(--oi-accent);
+  stroke-width: 2.5;
+}
+
+.node.is-match .node-card {
+  stroke: var(--oi-accent);
+  stroke-width: 2.5;
+}
+
+.is-dim {
+  opacity: 0.22;
+}
+
+.node-name {
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--oi-text);
+}
+
+.node-count {
+  font-size: 11px;
+  fill: var(--oi-text-muted);
+}
+
+.status {
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: var(--oi-text-muted);
+}
+
+.status-critical {
+  fill: var(--oi-critical);
+}
+
+.status-serious {
+  fill: var(--oi-serious);
+}
+
+.status-warning {
+  fill: var(--oi-warning-text);
+}
+
+.status-good {
+  fill: var(--oi-good-strong);
+}
+
+/* Légende */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.875rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.6875rem;
+  color: var(--oi-text-muted);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.line {
+  width: 1.375rem;
+  height: 0;
+  border-top: 2.5px solid;
+}
+
+.line-update {
+  border-color: var(--au-update);
+}
+
+.line-create {
+  border-color: var(--au-create);
+}
+
+.line-calls {
+  border-color: var(--au-flow);
+  border-top-style: dashed;
+}
+
+.line-loop {
+  border-color: var(--au-loop);
+}
+
+.box {
+  width: 1rem;
+  height: 0.75rem;
+  border-radius: 3px;
+  border: 1.5px dashed;
+}
+
+.box-flow {
+  border-color: var(--au-flow);
+}
+
+.box-passive {
+  border-color: var(--oi-border-strong);
+  background: var(--oi-surface-muted);
+}

@@ -1,0 +1,121 @@
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field {
+  position: relative;
+}
+
+.area {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 4.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--oi-border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.875rem;
+  resize: vertical;
+  background: var(--oi-surface);
+  color: var(--oi-text);
+}
+
+.area:focus {
+  outline: none;
+  border-color: var(--oi-accent);
+  box-shadow: 0 0 0 2px rgba(11, 92, 171, 0.18);
+}
+
+.suggestions {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 16rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--oi-surface);
+  border: 1px solid var(--oi-border);
+  border-radius: 8px;
+  box-shadow: var(--oi-shadow-pop);
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.suggestion-active,
+.suggestion:hover {
+  background: var(--oi-hover);
+}
+
+.avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--oi-accent);
+}
+
+.suggestion-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.suggestion-name {
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.suggestion-title {
+  font-size: 0.75rem;
+  color: var(--oi-text-muted);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--oi-text-muted);
+}
+
+.chip {
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--oi-accent);
+  background: var(--oi-accent-soft);
+}

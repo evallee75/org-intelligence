@@ -1,0 +1,151 @@
+<template>
+  <lightning-modal-header label="Export to Jira"></lightning-modal-header>
+  <lightning-modal-body>
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Preparing the export"
+          size="small"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={isLocal}>
+      <template lwc:if={error}>
+        <p class="error" role="alert">{error}</p>
+      </template>
+      <p class="muted destination">
+        One issue per recommendation, in a CSV file to import into Jira
+        <lightning-helptext
+          content="In Jira: Settings › System › External System Import › CSV (or Import issues from CSV in a project). Map Summary, Issue Type, Priority, Description and Labels. Install the Recommendations module to create the issues directly."
+        ></lightning-helptext>
+      </p>
+      <lightning-input
+        label="Issue type"
+        value={issueType}
+        required
+        onchange={handleIssueType}
+        class="issue-type"
+      ></lightning-input>
+      <ul class="list">
+        <template for:each={localItems} for:item="item">
+          <li key={item.key} class="item">
+            <span class="title">{item.summary}</span>
+            <span class="muted"
+              >Priority {item.priority} · labels {item.labelsText}</span
+            >
+            <template lwc:if={item.exportedAt}>
+              <span class="existing">
+                Already in a Jira file
+                <template lwc:if={item.willSkip}> (skipped)</template>
+              </span>
+            </template>
+          </li>
+        </template>
+      </ul>
+      <template lwc:if={localPreviouslyExported}>
+        <lightning-input
+          type="checkbox"
+          label="Include the recommendations already in a Jira file"
+          checked={includeExported}
+          onchange={handleInclude}
+        ></lightning-input>
+      </template>
+    </template>
+    <template lwc:else>
+      <template lwc:if={error}>
+        <p class="error" role="alert">{error}</p>
+      </template>
+      <template lwc:if={notConfigured}>
+        <p class="notice">{status.message}</p>
+      </template>
+      <template lwc:else>
+        <p class="muted destination">Destination: {destination}</p>
+      </template>
+
+      <template lwc:if={results}>
+        <p class="summary">{summaryText}</p>
+        <ul class="list">
+          <template for:each={resultRows} for:item="row">
+            <li key={row.key} class={row.className}>
+              <span class="name">{row.recommendationName}</span>
+              <span class="title">{row.title}</span>
+              <template lwc:if={row.issueUrl}>
+                <a
+                  href={row.issueUrl}
+                  target="_blank"
+                  rel="noopener"
+                  class="issue"
+                  >{row.issueKey} ↗</a
+                >
+              </template>
+              <template lwc:if={row.error}>
+                <span class="row-error">{row.error}</span>
+              </template>
+            </li>
+          </template>
+        </ul>
+      </template>
+      <template lwc:else>
+        <ul class="list">
+          <template for:each={items} for:item="item">
+            <li key={item.recommendationId} class="item">
+              <span class="title">{item.summary}</span>
+              <span class="muted"
+                >Priority {item.priority} · labels {item.labelsText}</span
+              >
+              <template lwc:if={item.hasExisting}>
+                <span class="existing">
+                  Already in Jira:
+                  <a href={item.existingUrl} target="_blank" rel="noopener"
+                    >{item.existingKey}</a
+                  >
+                  <template lwc:if={item.willSkip}> (skipped)</template>
+                </span>
+              </template>
+            </li>
+          </template>
+        </ul>
+        <template lwc:if={hasAlreadyExported}>
+          <lightning-input
+            type="checkbox"
+            label="Create new issues for the recommendations already in Jira"
+            checked={includeExported}
+            onchange={handleInclude}
+          ></lightning-input>
+        </template>
+        <button type="button" class="link" onclick={handleTogglePayload}>
+          {payloadLabel}
+        </button>
+        <template lwc:if={showPayload}>
+          <pre class="payload">{preview.samplePayload}</pre>
+        </template>
+        <p class="muted">
+          Each issue links back to its recommendation; the issue key is stored
+          on the recommendation and in its history.
+        </p>
+      </template>
+    </template>
+  </lightning-modal-body>
+  <lightning-modal-footer>
+    <lightning-button label="Close" onclick={handleClose}></lightning-button>
+    <template lwc:if={isLocal}>
+      <lightning-button
+        variant="brand"
+        label={downloadLabel}
+        icon-name="utility:download"
+        disabled={downloadDisabled}
+        onclick={handleDownload}
+        class="create"
+      ></lightning-button>
+    </template>
+    <template lwc:elseif={showCreate}>
+      <lightning-button
+        variant="brand"
+        label={createLabel}
+        disabled={createDisabled}
+        onclick={handleCreate}
+        class="create"
+      ></lightning-button>
+    </template>
+  </lightning-modal-footer>
+</template>

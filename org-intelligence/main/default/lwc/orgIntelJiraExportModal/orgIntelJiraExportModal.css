@@ -1,0 +1,112 @@
+.loading {
+  position: relative;
+  min-height: 6rem;
+}
+
+.muted {
+  font-size: 0.75rem;
+  color: #5c6470;
+}
+
+.destination {
+  margin-bottom: 0.5rem;
+}
+
+.notice {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: #fef5de;
+  font-size: 0.8125rem;
+}
+
+.error,
+.row-error {
+  color: #a12a2a;
+  font-size: 0.8125rem;
+}
+
+.summary {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.list {
+  max-height: 22rem;
+  overflow-y: auto;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.item,
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e3e8ef;
+  font-size: 0.8125rem;
+}
+
+.result {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result .row-error {
+  grid-column: 1 / -1;
+}
+
+.title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  font-size: 0.75rem;
+  color: #5c6470;
+}
+
+.issue {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.existing {
+  font-size: 0.75rem;
+  color: #8c5a00;
+}
+
+.link {
+  margin: 0.5rem 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.8125rem;
+  color: #0b5cab;
+  cursor: pointer;
+}
+
+.payload {
+  max-height: 16rem;
+  overflow: auto;
+  margin: 0 0 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #0f1b2d;
+  color: #e7edf5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.create {
+  margin-left: 0.5rem;
+}
+
+.issue-type {
+  max-width: 16rem;
+  margin-bottom: 0.5rem;
+}

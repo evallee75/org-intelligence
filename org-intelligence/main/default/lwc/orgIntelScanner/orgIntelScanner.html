@@ -1,0 +1,110 @@
+<template>
+  <template lwc:if={selectedScanId}>
+    <c-org-intel-scan-detail
+      scan-id={selectedScanId}
+      onback={handleBack}
+      onnavigate={handleDetailNavigate}
+    ></c-org-intel-scan-detail>
+  </template>
+
+  <template lwc:else>
+    <div class="sn-scanner">
+      <div class="sn-toolbar">
+        <h2 class="sn-page-title">
+          Org Scanner
+          <lightning-helptext
+            content="Reads metadata with your own permissions and never changes anything in the org. The scan runs in this browser tab and is stored in this browser only: the latest scan keeps its details, older ones their summary."
+          ></lightning-helptext>
+          <template lwc:if={tooling}>
+            <c-org-intel-badge
+              label={toolingLabel}
+              tone={toolingTone}
+              data-id="tooling-status"
+            ></c-org-intel-badge>
+          </template>
+        </h2>
+        <div class="sn-toolbar-actions">
+          <c-org-intel-scan-control
+            hide-history
+            show-data
+            onnavigate={handleControlNavigate}
+          ></c-org-intel-scan-control>
+          <lightning-button-icon
+            icon-name="utility:refresh"
+            alternative-text="Refresh the scanner"
+            title="Refresh"
+            onclick={handleRefresh}
+          ></lightning-button-icon>
+        </div>
+      </div>
+
+      <template lwc:if={isLoading}>
+        <div class="sn-loading" role="status">
+          <lightning-spinner
+            alternative-text="Loading the scanner"
+            size="medium"
+          ></lightning-spinner>
+        </div>
+      </template>
+
+      <template lwc:elseif={error}>
+        <c-org-intel-error-panel
+          title="The scanner could not be loaded"
+          error={error}
+          show-retry
+          onretry={handleRefresh}
+        ></c-org-intel-error-panel>
+      </template>
+
+      <template lwc:else>
+        <template lwc:if={showToolingNotice}>
+          <p class="sn-notice" data-id="tooling-message">
+            <lightning-icon
+              icon-name="utility:warning"
+              size="xx-small"
+            ></lightning-icon>
+            <span>{tooling.message}</span>
+            <lightning-helptext
+              content="Without the Tooling API, validation rules, dependencies and code coverage are skipped. To connect it: Settings › Tooling API › Set up automatically."
+            ></lightning-helptext>
+          </p>
+        </template>
+
+        <!-- Historique -->
+        <article class="sn-card">
+          <header class="sn-card-header">
+            <h3 class="sn-card-title">
+              Scan history
+              <template lwc:if={hasScans}>
+                <span class="sn-count">{scanCountText}</span>
+              </template>
+              <c-org-intel-browser-badge></c-org-intel-browser-badge>
+            </h3>
+            <c-org-intel-export-menu
+              compact
+              disabled={noScans}
+              alternative-text="Export the scan history"
+              onexport={handleExportHistory}
+            ></c-org-intel-export-menu>
+          </header>
+          <template lwc:if={hasScans}>
+            <lightning-datatable
+              key-field="id"
+              data={historyRows}
+              columns={historyColumns}
+              hide-checkbox-column
+              onrowaction={handleRowAction}
+              data-id="history"
+            ></lightning-datatable>
+          </template>
+          <template lwc:else>
+            <p class="sn-card-empty">
+              No scan in this browser yet: run one, or open a scan file
+              shared by an administrator (Data menu).
+            </p>
+          </template>
+        </article>
+      </template>
+    </div>
+  </template>
+</template>

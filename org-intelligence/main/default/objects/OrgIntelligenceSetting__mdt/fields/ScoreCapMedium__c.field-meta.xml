@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ScoreCapMedium__c</fullName>
+    <description
+  >Points maximum retirés par une même règle de gravité Medium.</description>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Score cap - Medium</label>
+    <precision>5</precision>
+    <required>false</required>
+    <scale>1</scale>
+    <type>Number</type>
+</CustomField>

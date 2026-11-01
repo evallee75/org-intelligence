@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.tile {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0.625rem 0.875rem;
+  background: var(--oi-surface);
+  border: 1px solid var(--oi-border);
+  border-radius: var(--oi-radius);
+  box-shadow: var(--oi-shadow);
+}
+
+.tile-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tile-icon {
+  --slds-c-icon-color-foreground-default: var(--oi-text-muted);
+}
+
+.tile-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--oi-text-muted);
+}
+
+.tile-value {
+  margin-top: 0.125rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--oi-text);
+}
+
+.tile-unit {
+  margin-left: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--oi-text-muted);
+}
+
+.tile-caption {
+  margin-top: 0.125rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--oi-text-muted);
+}

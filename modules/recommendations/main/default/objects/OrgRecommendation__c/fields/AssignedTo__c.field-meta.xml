@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AssignedTo__c</fullName>
+    <description
+  >Responsable du traitement. Champ dédié plutôt que le propriétaire : tout utilisateur de l&apos;outil peut assigner, sans le droit de transfert.</description>
+    <label>Assigned To</label>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <referenceTo>User</referenceTo>
+    <relationshipLabel>Assigned Org Recommendations</relationshipLabel>
+    <relationshipName>AssignedOrgRecommendations</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>true</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <type>Lookup</type>
+</CustomField>

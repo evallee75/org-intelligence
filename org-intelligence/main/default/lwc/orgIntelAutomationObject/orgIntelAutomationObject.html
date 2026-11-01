@@ -1,0 +1,483 @@
+<template>
+  <div class="ao-body">
+    <!-- Objets -->
+    <aside class="objects" aria-label="Objects">
+      <lightning-input
+        type="search"
+        label="Search an object"
+        variant="label-hidden"
+        placeholder="Search an object…"
+        value={objectSearch}
+        onchange={handleObjectSearch}
+      ></lightning-input>
+      <template lwc:if={hasObjects}>
+        <ul class="object-list">
+          <template for:each={objects} for:item="item">
+            <li key={item.name}>
+              <button
+                type="button"
+                class={item.className}
+                data-name={item.name}
+                aria-current={item.current}
+                onclick={handleSelectObject}
+              >
+                <span class="object-name">{item.name}</span>
+                <span class="object-meta">
+                  <template for:each={item.dots} for:item="dot">
+                    <span key={dot.key} class={dot.className}>{dot.text}</span>
+                  </template>
+                </span>
+                <span class="object-badges">
+                  <template lwc:if={item.hasErrors}>
+                    <span class="count count-error" title={item.errorsTitle}
+                      >{item.errors}</span
+                    >
+                  </template>
+                  <template lwc:if={item.hasConflicts}>
+                    <span
+                      class="count count-conflict"
+                      title={item.conflictsTitle}
+                      >{item.conflicts}</span
+                    >
+                  </template>
+                </span>
+              </button>
+            </li>
+          </template>
+        </ul>
+      </template>
+      <template lwc:else>
+        <p class="muted empty">No automated object.</p>
+      </template>
+      <ul class="kind-legend">
+        <li><span class="mini mini-flow"></span>Flow</li>
+        <li><span class="mini mini-pb"></span>Process Builder</li>
+        <li><span class="mini mini-apex"></span>Apex</li>
+      </ul>
+    </aside>
+
+    <section class="ao-main">
+      <!-- Ordre d'exécution -->
+      <article class="card">
+        <header class="card-header">
+          <h3 class="card-title">
+            When a {objectName} record is saved
+            <lightning-helptext
+              content="Salesforce order of execution (validation rules not shown). Click an automation to see its details and its flow diagram."
+            ></lightning-helptext>
+          </h3>
+          <lightning-combobox
+            label="Event"
+            variant="label-hidden"
+            options={eventOptions}
+            value={event}
+            onchange={handleEvent}
+            class="event"
+          ></lightning-combobox>
+        </header>
+        <template lwc:if={isEmpty}>
+          <p class="muted empty">No active automation.</p>
+        </template>
+        <template lwc:else>
+          <div class={flowAreaClass}>
+            <svg
+              class="ao-overlay"
+              viewBox={overlayBox}
+              style={overlayStyle}
+              aria-hidden="true"
+            >
+              <template for:each={links} for:item="link">
+                <g key={link.key} class={link.className}>
+                  <path d={link.path}></path>
+                  <circle cx={link.startX} cy={link.startY} r="3"></circle>
+                  <polygon points={link.head}></polygon>
+                </g>
+              </template>
+            </svg>
+
+            <ol class="timeline">
+              <li class="terminal terminal-start">
+                <span class="terminal-dot"></span>
+                <span class="terminal-label">{startLabel}</span>
+              </li>
+              <template for:each={stages} for:item="stage">
+                <li key={stage.key} class={stage.className}>
+                  <template lwc:if={stage.isSystem}>
+                    <span class="stage-marker stage-marker-system">✓</span>
+                    <div class="stage-head">
+                      <span class="stage-title">{stage.title}</span>
+                      <span class="stage-subtitle">{stage.subtitle}</span>
+                    </div>
+                  </template>
+                  <template lwc:else>
+                    <span class="stage-marker">{stage.step}</span>
+                    <div class="stage-head">
+                      <span class="stage-title"
+                        >{stage.title}
+                        <span class="stage-count">{stage.countText}</span></span
+                      >
+                      <span class="stage-subtitle">{stage.subtitle}</span>
+                    </div>
+                    <div class="cards">
+                      <template for:each={stage.cards} for:item="card">
+                        <button
+                          key={card.key}
+                          type="button"
+                          class={card.className}
+                          data-id={card.id}
+                          aria-pressed={card.pressed}
+                          title={card.title}
+                          onclick={handleCardClick}
+                        >
+                          <span class="card-icon" style={card.iconStyle}>
+                            <lightning-icon
+                              icon-name={card.iconName}
+                              size="x-small"
+                              variant="inverse"
+                            ></lightning-icon>
+                          </span>
+                          <span class="card-body">
+                            <span class="card-name">{card.name}</span>
+                            <span class="card-subtitle">{card.subtitle}</span>
+                            <template lwc:if={card.hasBadges}>
+                              <span class="card-badges">
+                                <template
+                                  for:each={card.badges}
+                                  for:item="badge"
+                                >
+                                  <span
+                                    key={badge.key}
+                                    class={badge.className}
+                                    title={badge.title}
+                                    >{badge.text}</span
+                                  >
+                                </template>
+                              </span>
+                            </template>
+                          </span>
+                        </button>
+                      </template>
+                    </div>
+                  </template>
+                </li>
+              </template>
+              <li class="terminal terminal-end">
+                <span class="terminal-dot"></span>
+                <span class="terminal-label">Commit</span>
+              </li>
+            </ol>
+
+            <template lwc:if={hasTargets}>
+              <div class="targets">
+                <span class="targets-title">Also updates</span>
+                <template for:each={targets} for:item="target">
+                  <button
+                    key={target.key}
+                    type="button"
+                    class={target.className}
+                    data-name={target.name}
+                    data-sources={target.sources}
+                    title={target.title}
+                    onclick={handleTargetClick}
+                  >
+                    <span class="target-name">{target.name}</span>
+                    <span class="target-ops">{target.operations}</span>
+                  </button>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </article>
+
+      <!-- Automatisation sélectionnée -->
+      <template lwc:if={selected}>
+        <article class="card ao-selected">
+          <header class="card-header">
+            <div class="selected-title">
+              <span
+                class="card-icon card-icon-large"
+                style={selected.iconStyle}
+              >
+                <lightning-icon
+                  icon-name={selected.iconName}
+                  size="small"
+                  variant="inverse"
+                ></lightning-icon>
+              </span>
+              <div>
+                <h3 class="card-title">{selected.name}</h3>
+                <span class="muted">{selected.subtitle}</span>
+              </div>
+            </div>
+            <div class="selected-actions">
+              <template lwc:if={selected.link}>
+                <a
+                  href={selected.link}
+                  target="_blank"
+                  rel="noopener"
+                  class="open-link"
+                  >{selected.linkLabel} ↗</a
+                >
+              </template>
+              <lightning-button-icon
+                icon-name="utility:close"
+                variant="bare"
+                alternative-text="Close"
+                title="Close"
+                onclick={handleCloseSelected}
+              ></lightning-button-icon>
+            </div>
+          </header>
+          <dl class="facts">
+            <template lwc:if={selected.criteria}>
+              <dt>Runs when</dt>
+              <dd class="code" title={selected.criteria}>
+                {selected.criteria}
+              </dd>
+            </template>
+            <template lwc:if={selected.hasWrites}>
+              <dt>Writes</dt>
+              <dd>
+                <ul class="write-list">
+                  <template for:each={selected.writes} for:item="write">
+                    <li key={write.key}>{write.text}</li>
+                  </template>
+                </ul>
+              </dd>
+            </template>
+            <template lwc:if={selected.calls}>
+              <dt>Calls</dt>
+              <dd>{selected.calls}</dd>
+            </template>
+            <template lwc:if={selected.elementText}>
+              <dt>Size</dt>
+              <dd>{selected.elementText}</dd>
+            </template>
+            <template lwc:if={selected.truncatedText}>
+              <dt>Note</dt>
+              <dd class="muted">{selected.truncatedText}</dd>
+            </template>
+            <template lwc:if={selected.isApex}>
+              <dt>Note</dt>
+              <dd class="muted">
+                The code of Apex triggers is not interpreted: what they write is
+                unknown.
+              </dd>
+            </template>
+          </dl>
+          <template lwc:if={hasSelectedFindings}>
+            <ul class="findings">
+              <template for:each={selected.findings} for:item="finding">
+                <li key={finding.id}>
+                  <c-org-intel-badge
+                    label={finding.severityLabel}
+                    tone={finding.severityTone}
+                  ></c-org-intel-badge>
+                  <span class="finding-title">{finding.title}</span>
+                  <template lwc:if={finding.recommendationId}>
+                    <a
+                      href="#"
+                      data-id={finding.recommendationId}
+                      onclick={handleOpenRecommendation}
+                      >Open</a
+                    >
+                  </template>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:if={selected.errorSummary}>
+            <h4 class="sub-title error-title">{selected.errorSummary}</h4>
+            <ul class="errors">
+              <template for:each={selected.errorSamples} for:item="sample">
+                <li key={sample.key}>
+                  <span class="error-when">{sample.when}</span>
+                  <span class="muted">{sample.context}</span>
+                  <span class="error-message">{sample.message}</span>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:if={selected.isFlow}>
+            <c-org-intel-flow-diagram
+              model={selected.model}
+              omitted={selected.modelOmitted}
+            ></c-org-intel-flow-diagram>
+          </template>
+        </article>
+      </template>
+
+      <div class="cards-two">
+        <!-- Conflits -->
+        <article class="card">
+          <h3 class="card-title">
+            Conflicts
+            <template lwc:if={hasConflicts}>
+              <span class="count-pill">{conflictCountText}</span>
+            </template>
+            <lightning-helptext
+              content="Automations of this object that write the same field, run in no guaranteed order, save the record again or loop. Expand a conflict to see how to fix it."
+            ></lightning-helptext>
+          </h3>
+          <template lwc:if={hasConflicts}>
+            <ul class="conflicts">
+              <template for:each={conflicts} for:item="conflict">
+                <li key={conflict.key}>
+                  <button
+                    type="button"
+                    class="row-toggle"
+                    data-key={conflict.toggleKey}
+                    aria-expanded={conflict.expandedText}
+                    title={conflict.toggleLabel}
+                    onclick={handleToggleRow}
+                  >
+                    <lightning-icon
+                      icon-name={conflict.toggleIcon}
+                      size="xx-small"
+                      alternative-text={conflict.toggleLabel}
+                    ></lightning-icon>
+                  </button>
+                  <c-org-intel-badge
+                    label={conflict.label}
+                    tone={conflict.tone}
+                  ></c-org-intel-badge>
+                  <div class="conflict-body">
+                    <span class="conflict-title" title={conflict.detail}
+                      >{conflict.title}</span
+                    >
+                    <template lwc:if={conflict.hasAutomations}>
+                      <span class="conflict-chain">
+                        <template
+                          for:each={conflict.automations}
+                          for:item="automation"
+                        >
+                          <span key={automation.key}>
+                            <template lwc:if={automation.separator}>
+                              <span class="separator"
+                                >{automation.separator}</span
+                              >
+                            </template>
+                            <button
+                              type="button"
+                              class="automation-link"
+                              data-id={automation.id}
+                              onclick={handleSelectAutomation}
+                            >
+                              {automation.name}
+                            </button>
+                          </span>
+                        </template>
+                      </span>
+                    </template>
+                    <template lwc:if={conflict.expanded}>
+                      <span class="muted">{conflict.detail}</span>
+                      <span class="advice">{conflict.advice}</span>
+                    </template>
+                  </div>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:else>
+            <p class="muted empty">No conflict on this object.</p>
+          </template>
+        </article>
+
+        <!-- Erreurs d'exécution -->
+        <article class="card">
+          <h3 class="card-title">
+            Failed runs · {errorDays} days
+            <lightning-helptext
+              content="Source: failed flow interviews and flow interview logs kept by Salesforce. Expand a flow to see its latest errors."
+            ></lightning-helptext>
+          </h3>
+          <template lwc:if={flowErrorsMessage}>
+            <p class="muted">{flowErrorsMessage}</p>
+          </template>
+          <template lwc:if={hasObjectErrors}>
+            <ul class="errors">
+              <template for:each={objectErrors} for:item="item">
+                <li key={item.key}>
+                  <div class="error-line">
+                    <button
+                      type="button"
+                      class="row-toggle"
+                      data-key={item.toggleKey}
+                      aria-expanded={item.expandedText}
+                      title={item.toggleLabel}
+                      onclick={handleToggleRow}
+                    >
+                      <lightning-icon
+                        icon-name={item.toggleIcon}
+                        size="xx-small"
+                        alternative-text={item.toggleLabel}
+                      ></lightning-icon>
+                    </button>
+                    <button
+                      type="button"
+                      class="automation-link strong"
+                      data-id={item.id}
+                      onclick={handleSelectAutomation}
+                    >
+                      {item.name}
+                    </button>
+                    <span class="muted"
+                      >{item.countText} · {item.lastText}</span
+                    >
+                  </div>
+                  <template lwc:if={item.expanded}>
+                    <template for:each={item.samples} for:item="sample">
+                      <span key={sample.key} class="error-message"
+                        >{sample.when} — {sample.message}</span
+                      >
+                    </template>
+                  </template>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:else>
+            <div class="all-good">
+              <lightning-icon
+                icon-name="utility:success"
+                size="small"
+                class="all-good-icon"
+              ></lightning-icon>
+              <span class="muted">{orgErrorText}</span>
+            </div>
+          </template>
+        </article>
+      </div>
+
+      <!-- Constats de l'objet -->
+      <article class="card">
+        <h3 class="card-title">Scanner findings on {objectName}</h3>
+        <template lwc:if={hasObjectFindings}>
+          <ul class="findings">
+            <template for:each={objectFindings} for:item="finding">
+              <li key={finding.id}>
+                <c-org-intel-badge
+                  label={finding.severityLabel}
+                  tone={finding.severityTone}
+                ></c-org-intel-badge>
+                <span class="finding-title">{finding.title}</span>
+                <template lwc:if={finding.recommendationId}>
+                  <a
+                    href="#"
+                    data-id={finding.recommendationId}
+                    onclick={handleOpenRecommendation}
+                    >Open</a
+                  >
+                </template>
+              </li>
+            </template>
+          </ul>
+        </template>
+        <template lwc:else>
+          <p class="muted empty">No finding.</p>
+        </template>
+      </article>
+    </section>
+  </div>
+</template>

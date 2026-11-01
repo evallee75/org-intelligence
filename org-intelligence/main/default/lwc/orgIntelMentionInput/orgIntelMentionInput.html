@@ -1,0 +1,61 @@
+<template>
+  <div class="composer">
+    <div class="field">
+      <textarea
+        class="area"
+        rows="3"
+        placeholder={placeholder}
+        aria-label={placeholder}
+        aria-autocomplete="list"
+        oninput={handleInput}
+        onkeydown={handleKeyDown}
+        onblur={handleBlur}
+      ></textarea>
+      <template lwc:if={hasSuggestions}>
+        <ul class="suggestions" role="listbox" aria-label="People to mention">
+          <template for:each={suggestionItems} for:item="user">
+            <li
+              key={user.id}
+              class={user.className}
+              role="option"
+              aria-selected={user.selected}
+              data-id={user.id}
+              onmousedown={handleSuggestionMouseDown}
+            >
+              <template lwc:if={user.photoUrl}>
+                <img class="avatar" src={user.photoUrl} alt="" />
+              </template>
+              <template lwc:else>
+                <span class="avatar avatar-initials">{user.initials}</span>
+              </template>
+              <span class="suggestion-text">
+                <span class="suggestion-name">{user.name}</span>
+                <span class="suggestion-title">{user.title}</span>
+              </span>
+            </li>
+          </template>
+        </ul>
+      </template>
+    </div>
+    <div class="footer">
+      <div class="chips">
+        <template lwc:if={hasMentionChips}>
+          <span class="hint">Will notify:</span>
+          <template for:each={mentionChips} for:item="mention">
+            <span key={mention.id} class="chip">@{mention.name}</span>
+          </template>
+        </template>
+        <template lwc:else>
+          <span class="hint">Type @ to mention · Ctrl/⌘ + Enter to send</span>
+        </template>
+      </div>
+      <lightning-button
+        variant="brand"
+        label={buttonLabel}
+        icon-name="utility:send"
+        disabled={postDisabled}
+        onclick={handlePost}
+      ></lightning-button>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <brand>
+        <headerColor>#0B5CAB</headerColor>
+        <shouldOverrideOrgTheme>false</shouldOverrideOrgTheme>
+    </brand>
+    <description
+  >Org Intelligence : inventaire de l&apos;org, santé, recommandations et export de contexte.</description>
+    <formFactors>Large</formFactors>
+    <label>Org Intelligence</label>
+    <navType>Standard</navType>
+    <tabs>Org_Intelligence</tabs>
+    <tabs>standard-report</tabs>
+    <tabs>standard-Dashboard</tabs>
+    <uiType>Lightning</uiType>
+</CustomApplication>

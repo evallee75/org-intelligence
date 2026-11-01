@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Metric__c</fullName>
+    <label>Metric</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Errors</fullName>
+                <default>true</default>
+                <label>Errors</label>
+            </value>
+            <value>
+                <fullName>Calls</fullName>
+                <default>false</default>
+                <label>Calls</label>
+            </value>
+            <value>
+                <fullName>ErrorRate</fullName>
+                <default>false</default>
+                <label>Error rate (%)</label>
+            </value>
+            <value>
+                <fullName>AvgDuration</fullName>
+                <default>false</default>
+                <label>Average duration (ms)</label>
+            </value>
+            <value>
+                <fullName>SlowCalls</fullName>
+                <default>false</default>
+                <label>Slow calls</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

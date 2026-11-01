@@ -1,0 +1,430 @@
+<template>
+  <template lwc:if={isLoading}>
+    <div class="ov-loading" role="status">
+      <lightning-spinner
+        alternative-text="Loading the overview"
+        size="medium"
+      ></lightning-spinner>
+    </div>
+  </template>
+
+  <template lwc:elseif={error}>
+    <c-org-intel-error-panel
+      title="The overview could not be loaded"
+      error={error}
+      show-retry
+      onretry={handleRefresh}
+    ></c-org-intel-error-panel>
+  </template>
+
+  <template lwc:elseif={isEmpty}>
+    <c-org-intel-empty-state
+      title="No scan yet"
+      message="Inventory your Apex, flows and data model, then get findings. Read-only."
+      icon-name="utility:search"
+    >
+      <div class="ov-first-scan">
+        <c-org-intel-scan-control
+          data-id="run-first-scan"
+          show-data
+          onscanfinished={handleScanFinished}
+          onnavigate={handleScanNavigate}
+        ></c-org-intel-scan-control>
+      </div>
+      <template lwc:if={canRunScan}>
+        <p class="ov-hint">
+          Or open a scan file saved by another administrator (Data menu).
+        </p>
+      </template>
+      <template lwc:else>
+        <p class="ov-hint" data-id="ask-admin">
+          Scans stay in the browser that ran them: ask an Org Intelligence
+          administrator for a scan file, then open it with the Data menu.
+        </p>
+      </template>
+    </c-org-intel-empty-state>
+  </template>
+
+  <template lwc:else>
+    <div class="ov-overview">
+      <div class="ov-overview-toolbar">
+        <c-org-intel-scan-control
+          show-data
+          onscanfinished={handleScanFinished}
+          onnavigate={handleScanNavigate}
+        ></c-org-intel-scan-control>
+      </div>
+      <template lwc:if={failedBanner}>
+        <div
+          class="ov-banner ov-banner-warning"
+          role="status"
+          data-id="banner-failed"
+        >
+          <lightning-icon
+            icon-name="utility:warning"
+            size="x-small"
+          ></lightning-icon>
+          <span>{failedBanner}</span>
+        </div>
+      </template>
+
+      <!-- Bandeau d'indicateurs -->
+      <section class="kpis" aria-label="Key indicators">
+        <div
+          class="kpi kpi-score kpi-link"
+          data-id="score-card"
+          data-section="reports"
+          role="button"
+          tabindex="0"
+          title="Open the score trend"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <div class="kpi-head">
+            <span class="kpi-label">Health score</span>
+            <lightning-helptext
+              content={scoreMethodText}
+              class="kpi-help"
+            ></lightning-helptext>
+          </div>
+          <div class="kpi-line">
+            <span class="kpi-value" data-id="score-value">{scoreLabel}</span>
+            <span class="kpi-unit">/ 100</span>
+            <c-org-intel-badge
+              label={band.label}
+              tone={band.tone}
+            ></c-org-intel-badge>
+          </div>
+          <div
+            class="ov-meter"
+            role="meter"
+            aria-label="Health score"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={score}
+          >
+            <div class={meterClass} style={meterStyle}></div>
+          </div>
+          <span class="kpi-caption" title={lastScanTitle}>
+            <span class={lastScanDotClass}></span>
+            Last scan {lastScanValue} · {latest.name}
+          </span>
+        </div>
+
+        <div
+          class="kpi kpi-link"
+          data-section="scanner"
+          role="button"
+          tabindex="0"
+          title="Open the latest completed scan"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Findings</span>
+          <div class="kpi-line">
+            <span class="kpi-value">{findingValue}</span>
+          </div>
+          <span class="kpi-caption">
+            <template lwc:if={hasCollectionErrors}>
+              <lightning-icon
+                icon-name="utility:warning"
+                size="xx-small"
+                class="ov-warn"
+              ></lightning-icon>
+            </template>
+            {findingCaption}
+          </span>
+        </div>
+
+        <div
+          class="kpi kpi-link"
+          data-section="recommendations"
+          role="button"
+          tabindex="0"
+          title="Open the recommendations"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Open recommendations</span>
+          <div class="kpi-line">
+            <span class="kpi-value">{openValue}</span>
+          </div>
+          <span class="kpi-caption">{openCaption}</span>
+        </div>
+
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          variant="bare"
+          alternative-text="Refresh the overview"
+          title="Refresh"
+          onclick={handleRefresh}
+          class="kpi-refresh"
+        ></lightning-button-icon>
+      </section>
+
+      <template lwc:if={recommendationsError}>
+        <div
+          class="ov-banner ov-banner-warning"
+          role="status"
+          data-id="banner-recommendations"
+        >
+          <lightning-icon
+            icon-name="utility:warning"
+            size="x-small"
+          ></lightning-icon>
+          <span>The latest scan could not update the recommendations.</span>
+          <lightning-helptext content={recommendationsError}></lightning-helptext>
+        </div>
+      </template>
+
+      <template lwc:if={hasDomainTrend}>
+        <div class="ov-domains" data-id="domain-trend">
+          <span class="ov-domains-label">
+            Findings by domain
+            <lightning-helptext
+              content="Findings of the latest completed scan per domain, and the change since the previous completed scan."
+            ></lightning-helptext>
+          </span>
+          <template for:each={domainTrend} for:item="item">
+            <span key={item.domain} class="ov-domain" title={item.title}>
+              {item.domain}
+              <strong>{item.count}</strong>
+              <template lwc:if={item.deltaText}>
+                <span class={item.deltaClass}>{item.deltaText}</span>
+              </template>
+            </span>
+          </template>
+        </div>
+      </template>
+
+      <!-- Gravités (filtre) et priorités -->
+      <div class="grid-two grid-findings">
+        <article class="ov-card">
+          <header class="ov-card-header">
+            <h3 class="ov-card-title">
+              Open recommendations by severity
+              <lightning-helptext
+                content="Click a severity to filter the priority list."
+              ></lightning-helptext>
+            </h3>
+          </header>
+          <template lwc:if={hasOpenRecommendations}>
+            <ul class="distribution" data-id="distribution">
+              <template for:each={distribution} for:item="row">
+                <li key={row.key}>
+                  <button
+                    type="button"
+                    class={row.rowClass}
+                    data-value={row.value}
+                    aria-pressed={row.pressed}
+                    title={row.title}
+                    disabled={row.disabled}
+                    onclick={handleSeverity}
+                  >
+                    <c-org-intel-badge
+                      label={row.label}
+                      tone={row.tone}
+                    ></c-org-intel-badge>
+                    <span class="bar-track">
+                      <span class={row.barClass} style={row.barStyle}></span>
+                    </span>
+                    <span class="distribution-count">{row.count}</span>
+                    <span class="distribution-share">{row.share}</span>
+                  </button>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:else>
+            <p class="ov-card-empty">No open recommendation.</p>
+          </template>
+        </article>
+
+        <article class="ov-card">
+          <header class="ov-card-header">
+            <h3 class="ov-card-title">
+              {priorityTitle}
+              <span class="muted ov-count">{priorityCountText}</span>
+            </h3>
+            <div class="ov-card-actions">
+              <template lwc:if={severityFilter}>
+                <button
+                  type="button"
+                  class="filter-chip"
+                  onclick={handleClearSeverity}
+                  title="Remove the filter"
+                >
+                  <c-org-intel-badge
+                    label={filterLabel}
+                    tone={filterTone}
+                  ></c-org-intel-badge>
+                  <lightning-icon
+                    icon-name="utility:close"
+                    size="xx-small"
+                  ></lightning-icon>
+                </button>
+              </template>
+              <a href="#" class="ov-card-link" onclick={handleViewAll}
+                >{viewAllLabel}</a
+              >
+              <c-org-intel-export-menu
+                compact
+                disabled={noPriorities}
+                alternative-text="Export the matching recommendations"
+                onexport={handleExportPriorities}
+              ></c-org-intel-export-menu>
+            </div>
+          </header>
+          <div class="priority-filters">
+            <lightning-input
+              type="search"
+              label="Search recommendations"
+              variant="label-hidden"
+              placeholder="Search…"
+              value={searchTerm}
+              onchange={handlePrioritySearch}
+              class="priority-search"
+            ></lightning-input>
+            <div class="ov-chips" role="group" aria-label="Severity">
+              <template for:each={priorityChips} for:item="chip">
+                <button
+                  key={chip.key}
+                  type="button"
+                  class={chip.className}
+                  data-value={chip.value}
+                  aria-pressed={chip.pressed}
+                  onclick={handlePriorityChip}
+                >
+                  <span class="chip-dot"></span>{chip.label}
+                  <span class="chip-count">{chip.count}</span>
+                </button>
+              </template>
+            </div>
+          </div>
+          <template lwc:if={hasPriorities}>
+            <ul class="priorities" data-id="priorities">
+              <template for:each={priorities} for:item="rec">
+                <li key={rec.id} class={rec.rowClass}>
+                  <a
+                    href="#"
+                    class="priority-title"
+                    data-id={rec.id}
+                    title={rec.title}
+                    onclick={handleOpenRecord}
+                    >{rec.title}</a
+                  >
+                  <span class="priority-meta" title={rec.metaTitle}>
+                    <span class="mono">{rec.componentName}</span>
+                    <template lwc:if={rec.status}>
+                      <span class="sep">·</span>{rec.status}
+                    </template>
+                    <template lwc:if={rec.assignee}>
+                      <span class="sep">·</span>{rec.assignee}
+                    </template>
+                    <template lwc:if={rec.notDetected}>
+                      <span class="ov-gone">No longer detected</span>
+                    </template>
+                  </span>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:else>
+            <p class="ov-card-empty">No open recommendation here.</p>
+          </template>
+        </article>
+      </div>
+
+      <!-- Activité et derniers scans -->
+      <div class="grid-two">
+        <template lwc:if={isCollaborative}>
+          <article class="ov-card" data-id="activity">
+            <header class="ov-card-header">
+              <h3 class="ov-card-title">
+                Team activity
+                <lightning-helptext
+                  content="Latest decisions, assignments and due dates on recommendations."
+                ></lightning-helptext>
+              </h3>
+              <div class="ov-card-actions">
+                <c-org-intel-export-menu
+                  compact
+                  disabled={noActivity}
+                  alternative-text="Export the team activity"
+                  onexport={handleExportActivity}
+                ></c-org-intel-export-menu>
+              </div>
+            </header>
+            <template lwc:if={hasActivity}>
+              <ul class="activity">
+                <template for:each={activityItems} for:item="item">
+                  <li key={item.key} class="activity-item">
+                    <span class="activity-text" title={item.change}>
+                      <strong>{item.changedByName}</strong>
+                      <a
+                        href="#"
+                        data-id={item.recordId}
+                        onclick={handleOpenRecord}
+                        >{item.recordName}</a
+                      >
+                      <span class="activity-change">{item.change}</span>
+                    </span>
+                    <span class="muted nowrap">{item.when}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+            <template lwc:else>
+              <p class="ov-card-empty">No activity yet.</p>
+            </template>
+          </article>
+        </template>
+
+        <article class="ov-card">
+          <header class="ov-card-header">
+            <h3 class="ov-card-title">
+              Recent scans
+              <c-org-intel-browser-badge></c-org-intel-browser-badge>
+            </h3>
+            <c-org-intel-export-menu
+              compact
+              alternative-text="Export the recent scans"
+              onexport={handleExportScans}
+            ></c-org-intel-export-menu>
+          </header>
+          <table class="ov-table" data-id="recent-scans">
+            <thead>
+              <tr>
+                <th scope="col">Scan</th>
+                <th scope="col">When</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="ov-num">Findings</th>
+                <th scope="col" class="ov-num">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={recentScans} for:item="scan">
+                <tr key={scan.id}>
+                  <th scope="row">
+                    <a href="#" data-id={scan.id} onclick={handleOpenScan}
+                      >{scan.name}</a
+                    >
+                  </th>
+                  <td class="muted">{scan.when}</td>
+                  <td>
+                    <c-org-intel-badge
+                      label={scan.status}
+                      tone={scan.tone}
+                    ></c-org-intel-badge>
+                  </td>
+                  <td class="ov-num">{scan.findings}</td>
+                  <td class="ov-num">{scan.scoreLabel}</td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </article>
+      </div>
+    </div>
+  </template>
+</template>

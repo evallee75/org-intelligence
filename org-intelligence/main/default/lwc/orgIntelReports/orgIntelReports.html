@@ -1,0 +1,190 @@
+<template>
+  <div class="reports">
+    <div class="toolbar">
+      <div>
+        <h2 class="page-title">
+          Reports
+          <lightning-helptext content={pageHelp}></lightning-helptext>
+        </h2>
+        <c-org-intel-browser-badge
+          help="The scan history behind these trends stays in this browser only. Save the scans to a file from Overview to share them."
+        ></c-org-intel-browser-badge>
+      </div>
+      <div class="toolbar-actions">
+        <template lwc:if={hasDashboard}>
+          <lightning-button
+            variant="brand"
+            label="Open the dashboard"
+            icon-name="utility:dashboard"
+            onclick={handleOpenDashboard}
+          ></lightning-button>
+        </template>
+        <c-org-intel-export-menu
+          label="Export"
+          disabled={isLoading}
+          alternative-text="Export the trends and the report list (Excel: one sheet each)"
+          onexport={handleExport}
+        ></c-org-intel-export-menu>
+        <template lwc:if={hasNativeReports}>
+          <lightning-button
+            label="All reports"
+            icon-name="utility:report"
+            onclick={handleAllReports}
+          ></lightning-button>
+        </template>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the reports"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The reports could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:else>
+      <!-- Indicateurs : une seule bande compacte, explications dans l'aide -->
+      <section class="kpis" aria-label="Key indicators">
+        <template for:each={kpis} for:item="kpi">
+          <div key={kpi.key} class="kpi" data-key={kpi.key}>
+            <span class="kpi-label"
+              >{kpi.label}
+              <template lwc:if={kpi.help}>
+                <lightning-helptext content={kpi.help}></lightning-helptext>
+              </template>
+            </span>
+            <span class="kpi-line">
+              <span class="kpi-value">{kpi.value}</span>
+              <template lwc:if={kpi.unit}>
+                <span class="kpi-unit">{kpi.unit}</span>
+              </template>
+            </span>
+            <template lwc:if={kpi.caption}>
+              <span class="kpi-caption" title={kpi.caption}>{kpi.caption}</span>
+            </template>
+          </div>
+        </template>
+      </section>
+
+      <div class="grid-two">
+        <article class="card">
+          <h3 class="card-title">
+            Findings per scan, by severity
+            <lightning-helptext
+              content="Last 20 completed scans. Hover a bar for the detail."
+            ></lightning-helptext>
+          </h3>
+          <c-org-intel-trend-chart
+            title="Findings per scan, by severity"
+            mode="stacked"
+            points={findingPoints}
+            series={severitySeries}
+          ></c-org-intel-trend-chart>
+        </article>
+        <article class="card">
+          <h3 class="card-title">
+            Health score per scan
+            <lightning-helptext
+              content="Out of 100. The calculation method is explained on the Overview."
+            ></lightning-helptext>
+          </h3>
+          <c-org-intel-trend-chart
+            title="Health score per scan"
+            mode="line"
+            y-max="100"
+            points={scorePoints}
+            series={scoreSeries}
+          ></c-org-intel-trend-chart>
+        </article>
+        <template lwc:if={recommendationsEnabled}>
+          <article class="card">
+            <h3 class="card-title">
+              Created and resolved per month
+              <lightning-helptext
+                content="Recommendations created and resolved over the last 6 months (without the collaborative module: recommendations stored in this browser)."
+              ></lightning-helptext>
+            </h3>
+            <c-org-intel-trend-chart
+              title="Recommendations created and resolved per month"
+              mode="grouped"
+              points={resolutionPoints}
+              series={resolutionSeries}
+            ></c-org-intel-trend-chart>
+          </article>
+          <article class="card">
+            <h3 class="card-title">Open recommendations by category</h3>
+            <template lwc:if={hasCategories}>
+              <ul class="bars">
+                <template for:each={categories} for:item="row">
+                  <li key={row.key} class="bar-row">
+                    <span class="bar-label">{row.label}</span>
+                    <span class="bar-track"
+                      ><span class="bar-fill" style={row.barStyle}></span
+                    ></span>
+                    <span class="bar-count">{row.count}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+            <template lwc:else>
+              <p class="card-empty">No open recommendation.</p>
+            </template>
+          </article>
+        </template>
+      </div>
+
+      <template lwc:if={hasNativeReports}>
+        <article class="card">
+          <h3 class="card-title">
+            Native reports
+            <lightning-helptext
+              content="Salesforce reports in the “Org Intelligence” folders. Authorized users can change filters, save variants and build their own dashboards. Hover a report for its description."
+            ></lightning-helptext>
+          </h3>
+          <template lwc:if={hasReports}>
+            <ul class="report-grid">
+              <template for:each={reports} for:item="report">
+                <li key={report.id}>
+                  <button
+                    type="button"
+                    class="report"
+                    data-id={report.id}
+                    title={report.tooltip}
+                    onclick={handleOpenReport}
+                  >
+                    <lightning-icon
+                      icon-name="standard:report"
+                      size="x-small"
+                    ></lightning-icon>
+                    <span class="report-name">{report.name}</span>
+                    <span class="report-meta">{report.lastRun}</span>
+                  </button>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:else>
+            <p class="card-empty">
+              No report folder deployed or shared with you.
+            </p>
+          </template>
+        </article>
+      </template>
+    </template>
+  </div>
+</template>

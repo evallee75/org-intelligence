@@ -1,0 +1,357 @@
+<template>
+  <div class="storage">
+    <div class="toolbar">
+      <div class="title-block">
+        <h2 class="page-title">
+          Storage
+          <lightning-helptext content={pageHelp}></lightning-helptext>
+        </h2>
+        <div class="st-sub">
+          <p class="muted subtitle" title={scanText}>{scanText}</p>
+          <template lwc:if={hasScan}>
+            <c-org-intel-browser-badge
+              help="Storage figures come from the latest scan, kept in this browser only. Org limits are read live."
+            ></c-org-intel-browser-badge>
+          </template>
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <c-org-intel-export-menu
+          label="Export"
+          disabled={noSnapshot}
+          alternative-text="Export objects, files and recommendations"
+          onexport={handleExport}
+        ></c-org-intel-export-menu>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the storage"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The storage view could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:else>
+      <!-- Indicateurs -->
+      <section class="kpis" aria-label="Storage indicators">
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          title="Show the largest objects"
+          data-target="objects"
+          data-sort="size"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">{dataMeter.label}</span>
+          <span class="kpi-value">{dataMeter.value}</span>
+          <div
+            class="meter"
+            role="meter"
+            aria-label={dataMeter.label}
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={dataMeter.percent}
+          >
+            <div class={dataMeter.fillClass} style={dataMeter.fillStyle}></div>
+          </div>
+          <span class="kpi-caption">{dataMeter.caption}</span>
+        </div>
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          title="Show the files"
+          data-target="files"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">{fileMeter.label}</span>
+          <span class="kpi-value">{fileMeter.value}</span>
+          <div
+            class="meter"
+            role="meter"
+            aria-label={fileMeter.label}
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={fileMeter.percent}
+          >
+            <div class={fileMeter.fillClass} style={fileMeter.fillStyle}></div>
+          </div>
+          <span class="kpi-caption">{fileMeter.caption}</span>
+        </div>
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          title="Show all objects"
+          data-target="objects"
+          data-filter="all"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Records</span>
+          <span class="kpi-value">{recordTotal}</span>
+          <span class="kpi-caption">{objectCount}</span>
+        </div>
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          title="Show the files"
+          data-target="files"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Files</span>
+          <span class="kpi-value">{fileTotal}</span>
+          <span class="kpi-caption">{fileCaption}</span>
+        </div>
+      </section>
+
+      <template lwc:if={hasSnapshot}>
+        <div class="grid">
+          <!-- Enregistrements par objet -->
+          <article class="card card-wide" data-anchor="objects">
+            <header class="card-header card-toolbar">
+              <h3 class="card-title">
+                Records by object
+                <lightning-helptext content={objectsHelp}></lightning-helptext>
+              </h3>
+              <lightning-input
+                type="search"
+                label="Search an object"
+                variant="label-hidden"
+                placeholder="Search an object…"
+                value={objectSearch}
+                onchange={handleObjectSearch}
+                class="search"
+              ></lightning-input>
+              <lightning-combobox
+                label="Objects"
+                variant="label-hidden"
+                options={objectFilters}
+                value={objectFilter}
+                onchange={handleObjectFilter}
+              ></lightning-combobox>
+              <lightning-combobox
+                label="Sort by"
+                variant="label-inline"
+                options={sortOptions}
+                value={sortBy}
+                onchange={handleSort}
+                class="sort"
+              ></lightning-combobox>
+              <c-org-intel-export-menu
+                compact
+                disabled={noRows}
+                alternative-text="Export the objects shown"
+                data-sheet="objects"
+                onexport={handleExportSheet}
+              ></c-org-intel-export-menu>
+            </header>
+            <template lwc:if={hasRows}>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Object</th>
+                    <th scope="col" class="num">Records</th>
+                    <th scope="col" class="bar-col">Estimated size</th>
+                    <th scope="col" class="num">Growth</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template for:each={visibleRows} for:item="row">
+                    <tr key={row.name}>
+                      <th scope="row" class="object-cell" title={row.name}>
+                        <span class="object-name">{row.label}</span>
+                        <span class="mono muted object-api"
+                          >{row.name} · {row.typeLabel}</span
+                        >
+                      </th>
+                      <td class="num">{row.countText}</td>
+                      <td class="bar-col">
+                        <span class="bar-cell" title={row.shareTitle}>
+                          <span class="bar-track"
+                            ><span class="bar-fill" style={row.barStyle}></span
+                          ></span>
+                          <span class="bar-value">{row.sizeText}</span>
+                        </span>
+                      </td>
+                      <td class={row.growthClass}>{row.growthText}</td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+              <template lwc:if={hasMoreRows}>
+                <div class="more">
+                  <lightning-button
+                    label={moreLabel}
+                    onclick={handleShowAll}
+                  ></lightning-button>
+                </div>
+              </template>
+            </template>
+            <template lwc:else>
+              <p class="empty">No object matches.</p>
+            </template>
+          </article>
+
+          <!-- Recommandations -->
+          <article class="card">
+            <header class="card-header">
+              <h3 class="card-title">Storage recommendations</h3>
+              <c-org-intel-export-menu
+                compact
+                disabled={noFindings}
+                alternative-text="Export the storage recommendations"
+                data-sheet="findings"
+                onexport={handleExportSheet}
+              ></c-org-intel-export-menu>
+            </header>
+            <template lwc:if={hasFindings}>
+              <ul class="findings">
+                <template for:each={findings} for:item="finding">
+                  <li key={finding.id}>
+                    <c-org-intel-badge
+                      label={finding.severityLabel}
+                      tone={finding.severityTone}
+                    ></c-org-intel-badge>
+                    <span class="finding-title">{finding.title}</span>
+                    <template lwc:if={finding.recommendationId}>
+                      <a
+                        href="#"
+                        data-id={finding.recommendationId}
+                        onclick={handleOpenRecommendation}
+                        >Open</a
+                      >
+                    </template>
+                  </li>
+                </template>
+              </ul>
+            </template>
+            <template lwc:else>
+              <p class="empty">Nothing to report.</p>
+            </template>
+          </article>
+
+          <!-- Tendance -->
+          <article class="card">
+            <header class="card-header">
+              <h3 class="card-title">Storage over time</h3>
+            </header>
+            <template lwc:if={hasTrend}>
+              <c-org-intel-trend-chart
+                title="Storage over time"
+                mode="line"
+                points={trendPoints}
+                series={trendSeries}
+                value-suffix=" MB"
+              ></c-org-intel-trend-chart>
+            </template>
+            <template lwc:else>
+              <p class="empty">Appears after two Storage scans.</p>
+            </template>
+          </article>
+
+          <!-- Fichiers -->
+          <article class="card" data-anchor="files">
+            <header class="card-header">
+              <h3 class="card-title">Files by type</h3>
+              <c-org-intel-export-menu
+                compact
+                disabled={noFileTypes}
+                alternative-text="Export the files by type"
+                data-sheet="fileTypes"
+                onexport={handleExportSheet}
+              ></c-org-intel-export-menu>
+            </header>
+            <template lwc:if={hasFileTypes}>
+              <ul class="types">
+                <template for:each={fileTypes} for:item="type">
+                  <li key={type.key} class="type-row">
+                    <span class="type-name">{type.type}</span>
+                    <span class="bar-track"
+                      ><span
+                        class="bar-fill bar-file"
+                        style={type.barStyle}
+                      ></span
+                    ></span>
+                    <span class="num">{type.sizeText}</span>
+                    <span class="num muted">{type.countText}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+            <template lwc:else>
+              <p class="empty">No file in Salesforce Files.</p>
+            </template>
+            <p class="muted note">{filesFooter}</p>
+          </article>
+
+          <article class="card">
+            <header class="card-header">
+              <h3 class="card-title">Largest files</h3>
+              <c-org-intel-export-menu
+                compact
+                disabled={noLargestFiles}
+                alternative-text="Export the largest files"
+                data-sheet="largestFiles"
+                onexport={handleExportSheet}
+              ></c-org-intel-export-menu>
+            </header>
+            <template lwc:if={hasLargestFiles}>
+              <ul class="files">
+                <template for:each={largestFiles} for:item="file">
+                  <li key={file.key} title={file.metaTitle}>
+                    <a href={file.url} target="_self" class="file-name"
+                      >{file.name}</a
+                    >
+                    <span class="muted file-meta">{file.owner}</span>
+                    <span class="num file-size">{file.sizeText}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+            <template lwc:else>
+              <p class="empty">No file.</p>
+            </template>
+          </article>
+        </div>
+      </template>
+      <template lwc:else>
+        <c-org-intel-empty-state
+          title="No storage analysis yet"
+          message="Run a scan including Storage to see records and files."
+          icon-name="utility:archive"
+        >
+          <div class="st-scan" onclick={handleScanClick}>
+            <c-org-intel-scan-control
+              launch-label="Run a scan"
+              hide-history
+              onscanfinished={handleRefresh}
+              onnavigate={handleScanNavigate}
+            ></c-org-intel-scan-control>
+          </div>
+        </c-org-intel-empty-state>
+      </template>
+    </template>
+  </div>
+</template>

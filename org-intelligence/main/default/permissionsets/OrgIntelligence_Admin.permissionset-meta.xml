@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Org Intelligence - administrateur : lance les scans, gère les paramètres et toutes les
+  recommandations. Le scan lit les métadonnées avec les droits de l'utilisateur : il lui faut
+  aussi « Afficher la configuration » (View Setup and Configuration), porté par son profil.
+-->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Org Intelligence - Admin</label>
+    <description
+  >Lancement des scans, paramètres et gestion complète des recommandations Org Intelligence.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <applicationVisibilities>
+        <application>Org_Intelligence</application>
+        <visible>true</visible>
+    </applicationVisibilities>
+    <classAccesses>
+        <apexClass>OrgAdminController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>OrgIntelModuleController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>OrgIntelligenceController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>OrgToolingSetupController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <customMetadataTypeAccesses>
+        <enabled>true</enabled>
+        <name>OrgScanRule__mdt</name>
+    </customMetadataTypeAccesses>
+    <customMetadataTypeAccesses>
+        <enabled>true</enabled>
+        <name>OrgIntelligenceSetting__mdt</name>
+    </customMetadataTypeAccesses>
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>OrgIntelligence_User</name>
+    </customPermissions>
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>OrgIntelligence_Admin</name>
+    </customPermissions>
+    <customSettingAccesses>
+        <enabled>true</enabled>
+        <name>OrgIntelRuleOverride__c</name>
+    </customSettingAccesses>
+    <customSettingAccesses>
+        <enabled>true</enabled>
+        <name>OrgIntelSettings__c</name>
+    </customSettingAccesses>
+    <pageAccesses>
+        <apexPage>OrgIntelligenceToolingSetup</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
+    <tabSettings>
+        <tab>Org_Intelligence</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+</PermissionSet>

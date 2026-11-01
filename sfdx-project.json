@@ -1,0 +1,119 @@
+{
+  "packageDirectories": [
+    {
+      "path": "org-intelligence",
+      "default": true,
+      "package": "OrgIntelligence",
+      "postInstallScript": "OrgIntelInstallHandler",
+      "versionName": "Core",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Org Intelligence core: browser-driven metadata scanner, health score, automation map, storage, recommendations kept in the browser and settings. No custom object."
+    },
+    {
+      "path": "modules/recommendations",
+      "package": "OrgIntelligence-Recommendations",
+      "versionName": "Recommendations",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Collaborative edition of recommendations (shared records, status, assignment, Chatter comments, Jira API export, reports and dashboard).",
+      "dependencies": [
+        {
+          "package": "OrgIntelligence",
+          "versionNumber": "1.0.0.LATEST"
+        }
+      ]
+    },
+    {
+      "path": "modules/context-hub",
+      "package": "OrgIntelligence-ContextHub",
+      "versionName": "Context Hub",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Export the context of findings and recommendations to an external AI assistant (nothing stored in the org).",
+      "dependencies": [
+        {
+          "package": "OrgIntelligence",
+          "versionNumber": "1.0.0.LATEST"
+        }
+      ]
+    },
+    {
+      "path": "modules/api-monitoring",
+      "package": "OrgIntelligence-ApiMonitoring",
+      "versionName": "API Monitoring",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "API call log, org API usage and API alerts.",
+      "dependencies": [
+        {
+          "package": "OrgIntelligence",
+          "versionNumber": "1.0.0.LATEST"
+        }
+      ]
+    },
+    {
+      "path": "modules/field-usage",
+      "package": "OrgIntelligence-FieldUsage",
+      "versionName": "Field Usage",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Field usage analysis run from the browser: fill rates, unused and abandoned fields (nothing stored in the org).",
+      "dependencies": [
+        {
+          "package": "OrgIntelligence",
+          "versionNumber": "1.0.0.LATEST"
+        }
+      ]
+    },
+    {
+      "path": "modules/adoption",
+      "package": "OrgIntelligence-Adoption",
+      "versionName": "Adoption",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Salesforce adoption: licenses paid versus used, inactive users, unused add-ons and native features not used (results and contract kept in the browser).",
+      "dependencies": [
+        {
+          "package": "OrgIntelligence",
+          "versionNumber": "1.0.0.LATEST"
+        }
+      ]
+    },
+    {
+      "path": "modules/security",
+      "package": "OrgIntelligence-Security",
+      "versionName": "Security",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Read-only security audit of the org with a printable report (results kept in the browser).",
+      "dependencies": [
+        {
+          "package": "OrgIntelligence",
+          "versionNumber": "1.0.0.LATEST"
+        }
+      ]
+    },
+    {
+      "path": "modules/inventory",
+      "package": "OrgIntelligence-Inventory",
+      "versionName": "Inventory",
+      "versionNumber": "1.0.0.NEXT",
+      "versionDescription": "Metadata inventory (Visualforce, Aura, LWC, labels, resources, templates, layouts, reports, roles, groups...) with clean-up hints. No custom object.",
+      "dependencies": [
+        {
+          "package": "OrgIntelligence",
+          "versionNumber": "1.0.0.LATEST"
+        }
+      ]
+    },
+    {
+      "path": "source-tools"
+    }
+  ],
+  "name": "OrgIntelligence",
+  "namespace": "",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "66.0",
+  "packageAliases": {
+    "OrgIntelligence": "0Hofj00000055YXCAY",
+    "OrgIntelligence-Recommendations": "0Hofj00000055a9CAA",
+    "OrgIntelligence-ContextHub": "0Hofj00000055blCAA",
+    "OrgIntelligence-ApiMonitoring": "0Hofj00000055dNCAQ",
+    "OrgIntelligence-FieldUsage": "0Hofj00000055ezCAA",
+    "OrgIntelligence@1.0.0-1": "04tfj000000gdL7AAI"
+  }
+}

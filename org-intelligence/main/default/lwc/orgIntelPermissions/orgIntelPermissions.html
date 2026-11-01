@@ -1,0 +1,986 @@
+<template>
+  <div class="pm">
+    <div class="pm-toolbar">
+      <div>
+        <h2 class="pm-title">Profiles &amp; Permission Sets</h2>
+        <p class="pm-muted">
+          {subtitle}
+          <c-org-intel-browser-badge
+            help={badgeHelp}
+          ></c-org-intel-browser-badge>
+        </p>
+        <p lwc:if={showSessionNote} class="pm-muted protection-note">
+          <lightning-icon
+            icon-name="utility:warning"
+            size="xx-small"
+            alternative-text="Warning"
+          ></lightning-icon>
+          {protectionMessage}
+          <lightning-button
+            variant="base"
+            label="Save to file"
+            onclick={handleSaveData}
+          ></lightning-button>
+        </p>
+      </div>
+      <div class="pm-toolbar-actions">
+        <c-org-intel-data-menu
+          kind="security-permissions"
+          allow-clear
+          disable-save={noAnalysis}
+          clear-label="Clear stored analysis"
+          clear-message="Delete the permissions analysis and the field access stored in this browser? Save them to a file first if you need them."
+          onsave={handleSaveData}
+          onopen={handleDataOpen}
+          onclear={handleClearData}
+          onerror={handleDataError}
+        ></c-org-intel-data-menu>
+        <lightning-button
+          variant="brand"
+          label={runLabel}
+          icon-name="utility:user_role"
+          onclick={handleRun}
+          disabled={isRunning}
+        ></lightning-button>
+      </div>
+    </div>
+
+    <template lwc:if={isRunning}>
+      <div class="pm-running" role="status">
+        <lightning-spinner
+          alternative-text="Analyzing"
+          size="small"
+        ></lightning-spinner>
+        <span>{progress}</span>
+      </div>
+    </template>
+
+    <template lwc:if={isLoading}>
+      <div class="pm-loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The analysis could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:elseif={hasAnalysis}>
+      <!-- Indicateurs : clic = onglet -->
+      <section class="pm-kpis" aria-label="Summary">
+        <template for:each={kpis} for:item="kpi">
+          <button
+            key={kpi.key}
+            class={kpi.className}
+            data-key={kpi.key}
+            onclick={handleKpi}
+          >
+            <span class="pm-kpi-label"
+              >{kpi.label}
+              <template lwc:if={kpi.help}>
+                <lightning-helptext
+                  content={kpi.help}
+                ></lightning-helptext> </template
+            ></span>
+            <span class="pm-kpi-value">{kpi.value}</span>
+            <span class="pm-kpi-caption">{kpi.caption}</span>
+          </button>
+        </template>
+      </section>
+
+      <template lwc:if={isTruncated}>
+        <p class="pm-note">
+          <lightning-icon
+            icon-name="utility:warning"
+            size="xx-small"
+            alternative-text="Warning"
+          ></lightning-icon>
+          Very large org: some lists were cut to stay within Salesforce limits.
+        </p>
+      </template>
+
+      <nav class="pm-tabs" aria-label="Views">
+        <template for:each={tabs} for:item="tab">
+          <button
+            key={tab.value}
+            class={tab.className}
+            data-value={tab.value}
+            aria-current={tab.selected}
+            onclick={handleTab}
+          >
+            {tab.label}
+            <template lwc:if={tab.hasCount}>
+              <span class="pm-tab-count">{tab.count}</span>
+            </template>
+          </button>
+        </template>
+      </nav>
+
+      <!-- Constats -->
+      <template lwc:if={isFindings}>
+        <div class="pm-tiles">
+          <template for:each={severityTiles} for:item="tile">
+            <button
+              key={tile.value}
+              class={tile.className}
+              data-value={tile.value}
+              onclick={handleSeverityTile}
+            >
+              <span class="pm-tile-count">{tile.count}</span>
+              <span class="pm-tile-label">{tile.label}</span>
+            </button>
+          </template>
+        </div>
+        <div class="pm-filters">
+          <lightning-input
+            type="search"
+            class="pm-search"
+            label="Search"
+            variant="label-hidden"
+            placeholder="Search a finding, a profile, a permission set…"
+            value={search}
+            onchange={handleSearch}
+          ></lightning-input>
+          <lightning-helptext
+            content="Findings are computed in this browser from the analysis. Select some and send them to Recommendations to track them."
+          ></lightning-helptext>
+          <div class="pm-filter-actions">
+            <template lwc:if={selectedCount}>
+              <lightning-button
+                variant="base"
+                label="Clear"
+                onclick={handleClearSelection}
+              ></lightning-button>
+              <lightning-button
+                variant="brand-outline"
+                label={sendLabel}
+                icon-name="utility:task"
+                onclick={handleSend}
+                disabled={sendDisabled}
+              ></lightning-button>
+            </template>
+            <template lwc:else>
+              <lightning-button
+                variant="base"
+                label="Select all"
+                onclick={handleSelectAll}
+              ></lightning-button>
+            </template>
+            <c-org-intel-export-menu
+              compact
+              onexport={handleExportFindings}
+            ></c-org-intel-export-menu>
+          </div>
+        </div>
+        <template lwc:if={findingsNote}>
+          <p class="pm-note">{findingsNote}</p>
+        </template>
+        <template lwc:if={hasFindings}>
+          <ul class="pm-card pm-rows">
+            <template for:each={visibleFindings} for:item="item">
+              <li key={item.id} class="pm-row-item">
+                <div class="pm-row pm-row-select">
+                  <span>
+                    <input
+                      type="checkbox"
+                      aria-label={item.checkboxLabel}
+                      data-id={item.id}
+                      checked={item.checked}
+                      onchange={handleSelect}
+                    />
+                  </span>
+                  <button
+                    class="pm-row-main"
+                    aria-expanded={item.expanded}
+                    data-id={item.id}
+                    onclick={handleToggle}
+                  >
+                    <lightning-icon
+                      icon-name={item.toggleIcon}
+                      size="xx-small"
+                      alternative-text={item.toggleLabel}
+                    ></lightning-icon>
+                    <span class="pm-row-title">{item.title}</span>
+                    <span class="pm-row-metric">{item.element}</span>
+                  </button>
+                  <c-org-intel-badge
+                    label={item.severity}
+                    tone={item.tone}
+                  ></c-org-intel-badge>
+                </div>
+                <template lwc:if={item.expanded}>
+                  <div class="pm-detail">
+                    <p>{item.detail}</p>
+                    <dl class="pm-facts">
+                      <dt>What to do</dt>
+                      <dd>{item.advice}</dd>
+                    </dl>
+                    <template lwc:if={item.hasAffected}>
+                      <ul class="pm-list">
+                        <template
+                          for:each={item.affectedItems}
+                          for:item="entry"
+                        >
+                          <li key={entry.key}>{entry.label}</li>
+                        </template>
+                      </ul>
+                    </template>
+                    <template lwc:if={item.canCompare}>
+                      <div>
+                        <lightning-button
+                          variant="base"
+                          label="Compare both"
+                          icon-name="utility:merge"
+                          data-id={item.id}
+                          onclick={handleCompareFinding}
+                        ></lightning-button>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </li>
+            </template>
+          </ul>
+        </template>
+        <template lwc:else>
+          <c-org-intel-empty-state
+            title="No finding"
+            message="Nothing to clean up with these filters."
+            icon-name="utility:success"
+            variant="success"
+          ></c-org-intel-empty-state>
+        </template>
+      </template>
+
+      <!-- Profils -->
+      <template lwc:if={isProfiles}>
+        <div class="pm-tiles">
+          <template for:each={profileTiles} for:item="tile">
+            <button
+              key={tile.value}
+              class={tile.className}
+              data-value={tile.value}
+              onclick={handleProfileTile}
+            >
+              <span class="pm-tile-count">{tile.count}</span>
+              <span class="pm-tile-label">{tile.label}</span>
+            </button>
+          </template>
+        </div>
+        <div class="pm-filters">
+          <lightning-input
+            type="search"
+            class="pm-search"
+            label="Search"
+            variant="label-hidden"
+            placeholder="Search a profile or a license…"
+            value={search}
+            onchange={handleSearch}
+          ></lightning-input>
+          <div class="pm-filter-actions">
+            <c-org-intel-export-menu
+              compact
+              onexport={handleExportProfiles}
+            ></c-org-intel-export-menu>
+          </div>
+        </div>
+        <ul class="pm-card pm-rows">
+          <template for:each={visibleProfiles} for:item="row">
+            <li key={row.id} class="pm-row-item">
+              <div class="pm-row pm-row-container">
+                <button
+                  class="pm-row-main"
+                  aria-expanded={row.expanded}
+                  data-id={row.id}
+                  onclick={handleToggle}
+                >
+                  <lightning-icon
+                    icon-name={row.toggleIcon}
+                    size="xx-small"
+                    alternative-text={row.toggleLabel}
+                  ></lightning-icon>
+                  <span class="pm-row-title">{row.name}</span>
+                  <span class="pm-row-metric">{row.license}</span>
+                </button>
+                <span class="pm-cell-text">{row.usersText}</span>
+                <span class="pm-cell-text">{row.objectsText}</span>
+                <span class="pm-badges">
+                  <c-org-intel-badge
+                    label={row.typeLabel}
+                    tone="neutral"
+                  ></c-org-intel-badge>
+                  <template lwc:if={row.hasPowers}>
+                    <c-org-intel-badge
+                      label="Admin"
+                      tone="serious"
+                    ></c-org-intel-badge>
+                  </template>
+                  <template lwc:if={row.warn}>
+                    <lightning-icon
+                      icon-name="utility:warning"
+                      size="xx-small"
+                      alternative-text="Has findings"
+                      title="Has findings"
+                    ></lightning-icon>
+                  </template>
+                </span>
+              </div>
+              <template lwc:if={row.expanded}>
+                <div class="pm-detail">
+                  <dl class="pm-facts">
+                    <template lwc:if={row.hasPowers}>
+                      <dt>Admin permissions</dt>
+                      <dd>{row.powerText}</dd>
+                    </template>
+                    <dt>Key permissions</dt>
+                    <dd>{row.permissionLabels}</dd>
+                    <dt>Objects</dt>
+                    <dd>{row.objectsText}</dd>
+                    <dt>Last modified</dt>
+                    <dd>{row.modifiedText}</dd>
+                    <template lwc:if={row.description}>
+                      <dt>Description</dt>
+                      <dd>{row.description}</dd>
+                    </template>
+                  </dl>
+                  <template lwc:if={row.hasRelated}>
+                    <div class="pm-badges">
+                      <template for:each={row.related} for:item="f">
+                        <c-org-intel-badge
+                          key={f.id}
+                          label={f.title}
+                          tone={f.tone}
+                        ></c-org-intel-badge>
+                      </template>
+                    </div>
+                  </template>
+                  <div>
+                    <lightning-button
+                      variant="base"
+                      label="Compare with…"
+                      icon-name="utility:merge"
+                      data-id={row.id}
+                      onclick={handleCompareWith}
+                    ></lightning-button>
+                  </div>
+                </div>
+              </template>
+            </li>
+          </template>
+        </ul>
+        <p class="pm-muted">{profilesMore}</p>
+      </template>
+
+      <!-- Permission sets et groupes -->
+      <template lwc:if={isPermissionSets}>
+        <div class="pm-tiles">
+          <template for:each={setTiles} for:item="tile">
+            <button
+              key={tile.value}
+              class={tile.className}
+              data-value={tile.value}
+              onclick={handleSetTile}
+            >
+              <span class="pm-tile-count">{tile.count}</span>
+              <span class="pm-tile-label">{tile.label}</span>
+            </button>
+          </template>
+        </div>
+        <div class="pm-filters">
+          <lightning-input
+            type="search"
+            class="pm-search"
+            label="Search"
+            variant="label-hidden"
+            placeholder="Search a permission set, a group, a namespace…"
+            value={search}
+            onchange={handleSearch}
+          ></lightning-input>
+          <lightning-helptext
+            content="Profile-owned permission sets are excluded. Permission sets from packages show their namespace: they cannot be edited or deleted."
+          ></lightning-helptext>
+          <div class="pm-filter-actions">
+            <c-org-intel-export-menu
+              compact
+              onexport={handleExportSets}
+            ></c-org-intel-export-menu>
+          </div>
+        </div>
+        <ul class="pm-card pm-rows">
+          <template for:each={visibleSets} for:item="row">
+            <li key={row.id} class="pm-row-item">
+              <div class="pm-row pm-row-container">
+                <button
+                  class="pm-row-main"
+                  aria-expanded={row.expanded}
+                  data-id={row.id}
+                  onclick={handleToggle}
+                >
+                  <lightning-icon
+                    icon-name={row.toggleIcon}
+                    size="xx-small"
+                    alternative-text={row.toggleLabel}
+                  ></lightning-icon>
+                  <span class="pm-row-title">{row.name}</span>
+                  <span class="pm-row-metric">{row.license}</span>
+                </button>
+                <span class="pm-cell-text">{row.usersText}</span>
+                <span class="pm-cell-text">{row.objectsText}</span>
+                <span class="pm-badges">
+                  <template lwc:if={row.hasType}>
+                    <c-org-intel-badge
+                      label={row.typeLabel}
+                      tone="info"
+                    ></c-org-intel-badge>
+                  </template>
+                  <template lwc:if={row.packaged}>
+                    <c-org-intel-badge
+                      label={row.namespace}
+                      tone="neutral"
+                    ></c-org-intel-badge>
+                  </template>
+                  <template lwc:if={row.hasPowers}>
+                    <c-org-intel-badge
+                      label="Admin"
+                      tone="serious"
+                    ></c-org-intel-badge>
+                  </template>
+                  <template lwc:if={row.warn}>
+                    <lightning-icon
+                      icon-name="utility:warning"
+                      size="xx-small"
+                      alternative-text="Has findings"
+                      title="Has findings"
+                    ></lightning-icon>
+                  </template>
+                </span>
+              </div>
+              <template lwc:if={row.expanded}>
+                <div class="pm-detail">
+                  <dl class="pm-facts">
+                    <dt>API name</dt>
+                    <dd>{row.apiName}</dd>
+                    <dt>Kind</dt>
+                    <dd>{row.kindLabel}</dd>
+                    <template lwc:if={row.hasPowers}>
+                      <dt>Admin permissions</dt>
+                      <dd>{row.powerText}</dd>
+                    </template>
+                    <dt>Key permissions</dt>
+                    <dd>{row.permissionLabels}</dd>
+                    <template lwc:if={row.hasGroups}>
+                      <dt>In groups</dt>
+                      <dd>{row.groupText}</dd>
+                    </template>
+                    <template lwc:if={row.hasComponents}>
+                      <dt>Contains</dt>
+                      <dd>{row.componentText}</dd>
+                      <dt>Status</dt>
+                      <dd>{row.status}</dd>
+                    </template>
+                    <dt>Last modified</dt>
+                    <dd>{row.modifiedText}</dd>
+                    <template lwc:if={row.description}>
+                      <dt>Description</dt>
+                      <dd>{row.description}</dd>
+                    </template>
+                  </dl>
+                  <template lwc:if={row.hasRelated}>
+                    <div class="pm-badges">
+                      <template for:each={row.related} for:item="f">
+                        <c-org-intel-badge
+                          key={f.id}
+                          label={f.title}
+                          tone={f.tone}
+                        ></c-org-intel-badge>
+                      </template>
+                    </div>
+                  </template>
+                  <div>
+                    <lightning-button
+                      variant="base"
+                      label="Compare with…"
+                      icon-name="utility:merge"
+                      data-id={row.id}
+                      onclick={handleCompareWith}
+                    ></lightning-button>
+                  </div>
+                </div>
+              </template>
+            </li>
+          </template>
+        </ul>
+        <p class="pm-muted">{setsMore}</p>
+      </template>
+
+      <!-- Matrice des droits objet -->
+      <template lwc:if={isObjects}>
+        <template lwc:if={hasObjectAccess}>
+          <div class="pm-filters">
+            <lightning-combobox
+              class="pm-picker"
+              label="Object"
+              variant="label-hidden"
+              placeholder="Choose an object"
+              options={objectOptions}
+              value={selectedObject}
+              onchange={handleObject}
+            ></lightning-combobox>
+            <lightning-combobox
+              class="pm-kind"
+              label="Kind"
+              variant="label-hidden"
+              options={kindFilters}
+              value={kindFilter}
+              onchange={handleKind}
+            ></lightning-combobox>
+            <lightning-input
+              type="search"
+              class="pm-search"
+              label="Search"
+              variant="label-hidden"
+              placeholder="Search a profile or permission set…"
+              value={search}
+              onchange={handleSearch}
+            ></lightning-input>
+            <lightning-input
+              type="checkbox"
+              label="In use"
+              checked={onlyInUse}
+              onchange={handleOnlyInUse}
+            ></lightning-input>
+            <lightning-input
+              type="checkbox"
+              label="With access"
+              checked={onlyWithAccess}
+              onchange={handleOnlyWithAccess}
+            ></lightning-input>
+            <lightning-helptext
+              content="Who can read, create, edit, delete, view all or modify all records of the object. In use = profile with active users, or permission set / group assigned to active users. Muting permission sets are not shown."
+            ></lightning-helptext>
+            <div class="pm-filter-actions">
+              <c-org-intel-export-menu
+                compact
+                onexport={handleExportObjects}
+              ></c-org-intel-export-menu>
+            </div>
+          </div>
+          <p class="pm-muted">{objectSummary}</p>
+          <template lwc:if={hasObjectRows}>
+            <div class="pm-card pm-table-scroll">
+              <table class="pm-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Kind</th>
+                    <th scope="col" class="pm-num">Users</th>
+                    <template for:each={objectFlagHeaders} for:item="flag">
+                      <th key={flag.letter} scope="col" class="pm-center">
+                        {flag.label}
+                      </th>
+                    </template>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template for:each={objectRows} for:item="row">
+                    <tr key={row.id}>
+                      <th scope="row">{row.name}</th>
+                      <td class="pm-muted">{row.kindLabel}</td>
+                      <td class="pm-num">{row.usersText}</td>
+                      <template for:each={row.cells} for:item="cell">
+                        <td key={cell.key} class="pm-center" title={cell.title}>
+                          <span class={cell.className}></span>
+                        </td>
+                      </template>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+          <template lwc:else>
+            <c-org-intel-empty-state
+              title="Nobody"
+              message="No profile or permission set matches these filters for this object."
+            ></c-org-intel-empty-state>
+          </template>
+        </template>
+        <template lwc:else>
+          <c-org-intel-empty-state
+            title="Object access not read"
+            message="Run the analysis again to read the object access."
+          ></c-org-intel-empty-state>
+        </template>
+      </template>
+
+      <!-- FLS -->
+      <template lwc:if={isFields}>
+        <div class="pm-filters">
+          <lightning-combobox
+            class="pm-picker"
+            label="Object"
+            variant="label-hidden"
+            placeholder="Choose an object"
+            options={objectOptions}
+            value={fieldObject}
+            onchange={handleFieldObject}
+          ></lightning-combobox>
+          <lightning-button
+            label={fieldLoadLabel}
+            icon-name="utility:refresh"
+            onclick={handleLoadFields}
+            disabled={isLoadingFields}
+          ></lightning-button>
+          <lightning-helptext
+            content="Field-level security of one object: R = read, E = edit, per profile and permission set. Read on demand, then kept in this browser."
+          ></lightning-helptext>
+          <template lwc:if={hasFieldAccess}>
+            <lightning-combobox
+              class="pm-kind"
+              label="Kind"
+              variant="label-hidden"
+              options={kindFilters}
+              value={kindFilter}
+              onchange={handleKind}
+            ></lightning-combobox>
+            <lightning-input
+              type="search"
+              class="pm-search"
+              label="Columns"
+              variant="label-hidden"
+              placeholder="Filter columns…"
+              value={search}
+              onchange={handleSearch}
+            ></lightning-input>
+            <lightning-input
+              type="search"
+              class="pm-search"
+              label="Fields"
+              variant="label-hidden"
+              placeholder="Search a field…"
+              value={fieldSearch}
+              onchange={handleFieldSearch}
+            ></lightning-input>
+            <lightning-input
+              type="checkbox"
+              label="In use"
+              checked={onlyInUse}
+              onchange={handleOnlyInUse}
+            ></lightning-input>
+            <div class="pm-filter-actions">
+              <c-org-intel-export-menu
+                compact
+                onexport={handleExportFields}
+              ></c-org-intel-export-menu>
+            </div>
+          </template>
+        </div>
+        <template lwc:if={isLoadingFields}>
+          <div class="pm-running" role="status">
+            <lightning-spinner
+              alternative-text="Reading field access"
+              size="small"
+            ></lightning-spinner>
+            <span>Reading field access…</span>
+          </div>
+        </template>
+        <template lwc:if={hasFieldAccess}>
+          <p class="pm-muted">{fieldSubtitle} {fieldColumnsNote}</p>
+          <template lwc:if={hasFieldRows}>
+            <div class="pm-card pm-table-scroll pm-matrix">
+              <table class="pm-table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="pm-sticky">Field</th>
+                    <th scope="col" class="pm-num">Editors</th>
+                    <template for:each={fieldColumns} for:item="col">
+                      <th
+                        key={col.id}
+                        scope="col"
+                        class="pm-vertical"
+                        title={col.title}
+                      >
+                        <span>{col.name}</span>
+                      </th>
+                    </template>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template for:each={fieldRows} for:item="row">
+                    <tr key={row.name}>
+                      <th scope="row" class="pm-sticky">
+                        <span class="pm-strong">{row.label}</span>
+                        <span class="pm-muted pm-block">{row.meta}</span>
+                      </th>
+                      <td class="pm-num">{row.editors}</td>
+                      <template for:each={row.cells} for:item="cell">
+                        <td key={cell.key} class="pm-center" title={cell.title}>
+                          <span class={cell.className}>{cell.label}</span>
+                        </td>
+                      </template>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+          <template lwc:else>
+            <c-org-intel-empty-state
+              title="Nothing to show"
+              message="No field or no profile / permission set matches these filters."
+            ></c-org-intel-empty-state>
+          </template>
+        </template>
+        <template lwc:elseif={noFieldAccessIdle}>
+          <c-org-intel-empty-state
+            title="Field access"
+            message="Choose an object, then read its field-level security."
+            icon-name="utility:lock"
+          ></c-org-intel-empty-state>
+        </template>
+      </template>
+
+      <!-- Comparaison -->
+      <template lwc:if={isCompare}>
+        <div class="pm-filters">
+          <lightning-combobox
+            class="pm-picker"
+            label="First"
+            variant="label-hidden"
+            placeholder="First profile or permission set"
+            options={compareOptions}
+            value={compareLeft}
+            onchange={handleCompareLeft}
+          ></lightning-combobox>
+          <lightning-button-icon
+            icon-name="utility:change_record_type"
+            alternative-text="Swap"
+            title="Swap"
+            onclick={handleSwap}
+          ></lightning-button-icon>
+          <lightning-combobox
+            class="pm-picker"
+            label="Second"
+            variant="label-hidden"
+            placeholder="Second profile or permission set"
+            options={compareOptions}
+            value={compareRight}
+            onchange={handleCompareRight}
+          ></lightning-combobox>
+          <lightning-button
+            variant="brand-outline"
+            label="Compare"
+            icon-name="utility:merge"
+            onclick={handleCompare}
+            disabled={compareDisabled}
+          ></lightning-button>
+          <lightning-helptext
+            content="Differences only: all system permissions, object access and field-level security."
+          ></lightning-helptext>
+        </div>
+        <template lwc:if={isComparing}>
+          <div class="pm-running" role="status">
+            <lightning-spinner
+              alternative-text="Comparing"
+              size="small"
+            ></lightning-spinner>
+            <span>Comparing…</span>
+          </div>
+        </template>
+        <template lwc:if={hasComparison}>
+          <p class="pm-muted">{compareSummary}</p>
+          <div class="pm-tiles">
+            <template for:each={compareTiles} for:item="tile">
+              <button
+                key={tile.value}
+                class={tile.className}
+                data-value={tile.value}
+                onclick={handleCompareTile}
+              >
+                <span class="pm-tile-count">{tile.count}</span>
+                <span class="pm-tile-label">{tile.label}</span>
+              </button>
+            </template>
+          </div>
+          <div class="pm-filters">
+            <lightning-input
+              type="search"
+              class="pm-search"
+              label="Search"
+              variant="label-hidden"
+              placeholder="Search a permission, an object, a field…"
+              value={search}
+              onchange={handleSearch}
+            ></lightning-input>
+            <div class="pm-filter-actions">
+              <c-org-intel-export-menu
+                compact
+                onexport={handleExportCompare}
+              ></c-org-intel-export-menu>
+            </div>
+          </div>
+          <template lwc:if={hasCompareRows}>
+            <div class="pm-card pm-table-scroll">
+              <table class="pm-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Area</th>
+                    <th scope="col">Permission</th>
+                    <th scope="col">{leftName}</th>
+                    <th scope="col">{rightName}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template for:each={compareRows} for:item="row">
+                    <tr key={row.key}>
+                      <td class="pm-muted">{row.area}</td>
+                      <th scope="row">
+                        {row.label}
+                        <span class="pm-muted pm-block">{row.item}</span>
+                      </th>
+                      <td>{row.left}</td>
+                      <td>{row.right}</td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <p class="pm-muted">{compareMore}</p>
+          </template>
+          <template lwc:else>
+            <c-org-intel-empty-state
+              title="Identical"
+              message="No difference with these filters."
+              icon-name="utility:success"
+              variant="success"
+            ></c-org-intel-empty-state>
+          </template>
+        </template>
+      </template>
+
+      <!-- Utilisateurs -->
+      <template lwc:if={isUsers}>
+        <section class="pm-kpis pm-kpis-small" aria-label="Users">
+          <template for:each={userKpis} for:item="kpi">
+            <div key={kpi.key} class="pm-kpi">
+              <span class="pm-kpi-label"
+                >{kpi.label}
+                <template lwc:if={kpi.help}>
+                  <lightning-helptext
+                    content={kpi.help}
+                  ></lightning-helptext> </template
+              ></span>
+              <span class="pm-kpi-value">{kpi.value}</span>
+            </div>
+          </template>
+          <div class="pm-kpi pm-dist-cell">
+            <span class="pm-kpi-label"
+              >Permission sets + groups per user
+              <lightning-helptext
+                content="Number of active users by number of permission sets and groups assigned (0 = profile only, internal users)."
+              ></lightning-helptext
+            ></span>
+            <div class="pm-dist" aria-hidden="true">
+              <template for:each={distribution} for:item="bar">
+                <div key={bar.key} class="pm-dist-col" title={bar.title}>
+                  <span class="pm-dist-value">{bar.count}</span>
+                  <span class="pm-dist-track">
+                    <span class="pm-dist-bar" style={bar.style}></span>
+                  </span>
+                  <span class="pm-dist-label">{bar.label}</span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </section>
+        <div class="pm-filters">
+          <div class="pm-tiles">
+            <template for:each={usersViews} for:item="view">
+              <button
+                key={view.value}
+                class={view.className}
+                data-value={view.value}
+                onclick={handleUsersView}
+              >
+                <span class="pm-tile-label">{view.label}</span>
+              </button>
+            </template>
+          </div>
+          <lightning-input
+            type="search"
+            class="pm-search"
+            label="Search"
+            variant="label-hidden"
+            placeholder="Search a user or a profile…"
+            value={search}
+            onchange={handleSearch}
+          ></lightning-input>
+          <div class="pm-filter-actions">
+            <c-org-intel-export-menu
+              compact
+              onexport={handleExportUsers}
+            ></c-org-intel-export-menu>
+          </div>
+        </div>
+        <p class="pm-muted">{usersNote}</p>
+        <template lwc:if={hasUserRows}>
+          <div class="pm-card pm-table-scroll">
+            <table class="pm-table">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Profile</th>
+                  <th scope="col" class="pm-num">Permission sets</th>
+                  <th scope="col" class="pm-num">Groups</th>
+                  <th scope="col" class="pm-num">Total</th>
+                  <th scope="col">Last login</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template for:each={userRows} for:item="row">
+                  <tr key={row.id}>
+                    <th scope="row">
+                      {row.name}
+                      <span class="pm-muted pm-block">{row.username}</span>
+                    </th>
+                    <td>{row.profile}</td>
+                    <td class="pm-num">{row.permissionSets}</td>
+                    <td class="pm-num">{row.groups}</td>
+                    <td class={row.totalClass}>{row.total}</td>
+                    <td>{row.lastLoginText}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+        <template lwc:else>
+          <c-org-intel-empty-state
+            title="Nobody"
+            message="No user matches."
+          ></c-org-intel-empty-state>
+        </template>
+      </template>
+    </template>
+    <template lwc:else>
+      <c-org-intel-empty-state
+        title="Who has access to what?"
+        message="Profiles, permission sets and groups, object and field access, comparisons and cleanup findings. Read-only, takes a few seconds."
+        icon-name="utility:user_role"
+      >
+        <lightning-button
+          variant="brand"
+          label="Run analysis"
+          onclick={handleRun}
+          disabled={isRunning}
+        ></lightning-button>
+      </c-org-intel-empty-state>
+    </template>
+  </div>
+</template>

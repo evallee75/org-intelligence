@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SeverityRank__c</fullName>
+    <description
+  >Rang numérique de la gravité, pour les tris (1 = Critical).</description>
+    <label>Severity Rank</label>
+    <formula
+  >CASE(TEXT(Severity__c), &quot;Critical&quot;, 1, &quot;High&quot;, 2, &quot;Medium&quot;, 3, &quot;Low&quot;, 4, 5)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <precision>18</precision>
+    <scale>0</scale>
+    <trackHistory>false</trackHistory>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

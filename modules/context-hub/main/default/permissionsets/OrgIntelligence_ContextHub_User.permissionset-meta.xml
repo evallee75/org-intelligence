@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Org Intelligence - module Context Hub (export du contexte d'une recommandation vers une IA), profil utilisateur.
+     Sans objet : l'accès est donné par la custom permission OrgIntelligence_ContextHub.
+     À assigner en plus du permission set Org Intelligence - User du socle. -->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>OrgIntelligence_ContextHub</name>
+    </customPermissions>
+    <description
+  >Org Intelligence Context Hub module - user access. Assign together with "Org Intelligence - User".</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Org Intelligence - Context Hub User</label>
+</PermissionSet>

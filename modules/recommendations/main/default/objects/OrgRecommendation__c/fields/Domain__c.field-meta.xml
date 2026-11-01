@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Domain__c</fullName>
+    <description
+  >Domaine fonctionnel déduit du préfixe de la règle (APEX_/TRIGGER_ = Apex, FLOW_/AUTOMATION_ = Flows &amp; Automation, OBJECT_/FIELD_ = Data Model, VR_ = Data Quality, STORAGE_ = Storage, ADOPTION_ = Adoption, SECURITY_ = Security). Toute nouvelle règle doit suivre cette convention de préfixe.</description>
+    <formula
+  >IF(OR(BEGINS(RuleCode__c, &quot;APEX_&quot;), BEGINS(RuleCode__c, &quot;TRIGGER_&quot;)), &quot;Apex&quot;,
+IF(OR(BEGINS(RuleCode__c, &quot;FLOW_&quot;), BEGINS(RuleCode__c, &quot;AUTOMATION_&quot;)), &quot;Flows &amp; Automation&quot;,
+IF(OR(BEGINS(RuleCode__c, &quot;OBJECT_&quot;), BEGINS(RuleCode__c, &quot;FIELD_&quot;)), &quot;Data Model&quot;,
+IF(BEGINS(RuleCode__c, &quot;VR_&quot;), &quot;Data Quality&quot;,
+IF(BEGINS(RuleCode__c, &quot;STORAGE_&quot;), &quot;Storage&quot;,
+IF(BEGINS(RuleCode__c, &quot;ADOPTION_&quot;), &quot;Adoption&quot;,
+IF(BEGINS(RuleCode__c, &quot;SECURITY_&quot;), &quot;Security&quot;, &quot;Other&quot;)))))))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Domain</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

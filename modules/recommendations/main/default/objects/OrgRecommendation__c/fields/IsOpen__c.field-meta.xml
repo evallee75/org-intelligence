@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsOpen__c</fullName>
+    <description>Ouverte = ni résolue ni ignorée.</description>
+    <label>Open</label>
+    <formula
+  >NOT(OR(ISPICKVAL(Status__c, &quot;Resolved&quot;), ISPICKVAL(Status__c, &quot;Ignored&quot;)))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StillDetected__c</fullName>
+    <description
+  >Faux si le dernier scan terminé ne retrouve plus le constat. Ne résout jamais la recommandation automatiquement.</description>
+    <label>Still Detected</label>
+    <defaultValue>true</defaultValue>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

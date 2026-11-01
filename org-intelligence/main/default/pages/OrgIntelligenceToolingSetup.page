@@ -1,0 +1,190 @@
+<apex:page
+  controller="OrgToolingSetupController"
+  title="Org Intelligence - Tooling API setup"
+  lightningStylesheets="true"
+  docType="html-5.0"
+  showHeader="false"
+  sidebar="false"
+>
+  <!-- Assistant de connexion Tooling API (cf. OrgToolingSetupController) : la session d'une page
+       Visualforce permet d'appeler l'API Metadata de l'org, contrairement à un composant Lightning.
+       Revue de sécurité : toute expression affichée est encodée selon son contexte (URLFOR dans les
+       attributs href, HTMLENCODE dans le texte) ; aucune expression dans un script. -->
+  <apex:slds />
+  <style>
+    .oi-wrap {
+      max-width: 44rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .oi-card {
+      padding: 1.25rem 1.5rem;
+      background: #fff;
+      border: 1px solid #dddbda;
+      border-radius: 0.5rem;
+    }
+    .oi-steps {
+      margin: 1rem 0 1rem 1.25rem;
+      list-style: decimal;
+      line-height: 1.7;
+    }
+    .oi-progress {
+      margin: 1rem 0;
+      padding: 0.75rem 1rem;
+      background: #f3f3f3;
+      border-radius: 0.25rem;
+    }
+    .oi-error {
+      margin: 1rem 0;
+      padding: 0.75rem 1rem;
+      color: #8c1c13;
+      background: #fef1ee;
+      border-radius: 0.25rem;
+    }
+    .oi-success {
+      margin: 1rem 0;
+      padding: 0.75rem 1rem;
+      background: #ebf7e6;
+      border-radius: 0.25rem;
+    }
+    .oi-muted {
+      color: #706e6b;
+      font-size: 0.8125rem;
+    }
+  </style>
+  <div class="slds-scope oi-wrap">
+    <div class="oi-card">
+      <h1 class="slds-text-heading_medium slds-m-bottom_small">
+        Connect Org Intelligence to the Tooling API
+      </h1>
+      <p>
+        The Tooling API gives the scanner access to code coverage, flow logic,
+        validation rules and dependencies. This assistant creates the connection
+        in this org, in about a minute:
+      </p>
+      <ol class="oi-steps">
+        <li>
+          an External Client App and an Auth. Provider (OAuth to this org only,
+          with a key and secret generated for this org and never displayed);
+        </li>
+        <li>
+          an External Credential with a per-user principal and the Named
+          Credential <code>OrgIntelligenceTooling</code>;
+        </li>
+        <li>
+          the permission set <code>Org Intelligence - Tooling Access</code>,
+          assigned to you.
+        </li>
+      </ol>
+      <p class="oi-muted">
+        Every call then runs with the permissions of the user who makes it.
+        These components belong to this org (outside the package); "Uninstall
+        Org Intelligence" removes them.
+      </p>
+
+      <apex:form id="setupForm">
+        <apex:actionPoller
+          action="{!poll}"
+          interval="5"
+          reRender="setupForm"
+          enabled="{!running}"
+        />
+
+        <apex:outputPanel
+          rendered="{!AND(NOT(running), NOT(finished), NOT(failed))}"
+        >
+          <apex:outputPanel rendered="{!alreadyConfigured}">
+            <div class="oi-success">
+              The connection already exists in this org.
+            </div>
+          </apex:outputPanel>
+          <apex:outputPanel rendered="{!NOT(isAdmin)}">
+            <div class="oi-error">
+              This setup is reserved to Org Intelligence administrators ("Org
+              Intelligence - Admin" permission set).
+            </div>
+          </apex:outputPanel>
+          <apex:commandButton
+            value="Create the connection"
+            action="{!start}"
+            reRender="setupForm"
+            styleClass="slds-button slds-button_brand"
+            rendered="{!AND(isAdmin, NOT(alreadyConfigured))}"
+          />
+        </apex:outputPanel>
+
+        <apex:outputPanel rendered="{!OR(running, finished, failed)}">
+          <div class="oi-progress">
+            <apex:repeat value="{!progress}" var="line">
+              <div>{!HTMLENCODE(line)}</div>
+            </apex:repeat>
+            <apex:outputPanel rendered="{!running}">
+              <div>… {!HTMLENCODE(currentStepLabel)} (deploying, a few seconds)</div>
+            </apex:outputPanel>
+          </div>
+        </apex:outputPanel>
+
+        <apex:outputPanel rendered="{!failed}">
+          <div class="oi-error">
+            <strong>The setup stopped.</strong> {!HTMLENCODE(errorMessage)}
+          </div>
+          <p class="oi-muted">
+            Nothing is left half-configured within a step (each one is rolled
+            back on error). You can check Setup › Deployment Status, or use the
+            script scripts/org-intelligence/setup-tooling.mjs.
+          </p>
+        </apex:outputPanel>
+
+        <apex:outputPanel
+          rendered="{!AND(OR(finished, alreadyConfigured), NOT(userAuthorized))}"
+        >
+          <div class="oi-success">
+            <apex:outputText
+              rendered="{!finished}"
+              value="The connection is created. "
+            />
+            <strong>Last step, for each administrator:</strong> connect your own
+            user (you log in once, then Org Intelligence calls the Tooling API
+            with your permissions).
+          </div>
+          <p>
+            <apex:commandButton
+              value="Connect my user"
+              action="{!connect}"
+              styleClass="slds-button slds-button_brand"
+              rendered="{!isAdmin}"
+            />
+            &nbsp;
+            <a
+              class="slds-button slds-button_neutral"
+              href="{!URLFOR(appUrl)}"
+              target="_top"
+              >Back to Org Intelligence</a
+            >
+          </p>
+          <p class="oi-muted">
+            If the button fails, open your personal settings ›
+            <a href="{!URLFOR(allowAccessUrl)}" target="_top">External Credentials</a>
+            › "Org Intelligence Tooling" › Allow Access (the "Org Intelligence -
+            Tooling Access" permission set is required).
+          </p>
+        </apex:outputPanel>
+
+        <apex:outputPanel rendered="{!AND(alreadyConfigured, userAuthorized)}">
+          <div class="oi-success">
+            Your user is connected: the scanner reads the Tooling API with your
+            permissions.
+          </div>
+          <p>
+            <a
+              class="slds-button slds-button_brand"
+              href="{!URLFOR(appUrl)}"
+              target="_top"
+              >Back to Org Intelligence</a
+            >
+          </p>
+        </apex:outputPanel>
+      </apex:form>
+    </div>
+  </div>
+</apex:page>

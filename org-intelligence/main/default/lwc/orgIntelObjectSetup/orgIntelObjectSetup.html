@@ -1,0 +1,558 @@
+<template>
+  <div class="os-root">
+    <div class="os-bar">
+      <h2 class="os-page-title">
+        Object Setup
+        <lightning-helptext
+          content="Pick an object: record types, page layouts and their assignments per profile, Lightning record pages (Dynamic Forms, Dynamic Actions) and compact layouts. Layouts, pages and compact layouts need the Tooling API."
+        ></lightning-helptext>
+      </h2>
+      <div class="os-bar-actions">
+        <c-org-intel-browser-badge
+          help="The last object setup analysis of each object is kept in this browser, never in the org. Use the Data menu to save it to a file or share it with another admin."
+        ></c-org-intel-browser-badge>
+        <c-org-intel-data-menu
+          kind="objectSetup"
+          allow-clear
+          clear-message="Delete every object setup analysis stored in this browser? Save them to a file first if you need them."
+          onsave={handleSaveFile}
+          onopen={handleOpenFile}
+          onclear={handleClearData}
+          onerror={handleDataError}
+        ></c-org-intel-data-menu>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Refresh"
+          title="Refresh"
+          onclick={handleRefresh}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <div class="os-body">
+      <!-- Objets -->
+      <aside class="os-objects" aria-label="Objects">
+        <lightning-input
+          type="search"
+          label="Search an object"
+          variant="label-hidden"
+          placeholder="Search an object…"
+          value={objectSearch}
+          onchange={handleObjectSearch}
+        ></lightning-input>
+        <div class="os-chips" role="group" aria-label="Filter objects">
+          <template for:each={objectFilters} for:item="filter">
+            <button
+              key={filter.value}
+              type="button"
+              class={filter.className}
+              data-value={filter.value}
+              aria-pressed={filter.pressed}
+              onclick={handleObjectFilter}
+            >
+              {filter.label}
+            </button>
+          </template>
+        </div>
+        <template lwc:if={isLoadingObjects}>
+          <div class="os-loading" role="status">
+            <lightning-spinner
+              alternative-text="Loading the objects"
+              size="small"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:elseif={objectsError}>
+          <c-org-intel-error-panel
+            title="The objects could not be loaded"
+            error={objectsError}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:elseif={hasObjectItems}>
+          <ul class="os-object-list">
+            <template for:each={objectItems} for:item="item">
+              <li key={item.apiName}>
+                <button
+                  type="button"
+                  class={item.className}
+                  data-name={item.apiName}
+                  aria-current={item.current}
+                  title={item.apiName}
+                  onclick={handleSelectObject}
+                >
+                  <span class="os-object-name">{item.label}</span>
+                  <span class="os-object-meta">{item.meta}</span>
+                  <template lwc:if={item.hasScore}>
+                    <span class={item.scoreClass} title="Setup score"
+                      >{item.score}</span
+                    >
+                  </template>
+                </button>
+              </li>
+            </template>
+          </ul>
+        </template>
+        <template lwc:else>
+          <p class="os-muted os-empty">No object matches.</p>
+        </template>
+      </aside>
+
+      <section class="os-main">
+        <template lwc:if={hasObject}>
+          <article class="os-card os-header-card">
+            <div>
+              <h3 class="os-object-title">{objectTitle}</h3>
+              <p class="os-muted" title={analyzedTitle}>
+                {objectName}
+                <template lwc:if={hasResult}> · {analyzedText}</template>
+              </p>
+            </div>
+            <lightning-button
+              variant="brand"
+              label={runLabel}
+              icon-name="utility:play"
+              disabled={isRunning}
+              onclick={handleRun}
+            ></lightning-button>
+          </article>
+
+          <template lwc:if={isRunning}>
+            <div class="os-loading" role="status">
+              <lightning-spinner
+                alternative-text="Analyzing the object setup"
+                size="small"
+              ></lightning-spinner>
+            </div>
+          </template>
+
+          <template lwc:if={error}>
+            <c-org-intel-error-panel
+              title="The object setup could not be analyzed"
+              error={error}
+            ></c-org-intel-error-panel>
+          </template>
+
+          <template lwc:if={isLoading}>
+            <div class="os-loading" role="status">
+              <lightning-spinner
+                alternative-text="Loading"
+                size="small"
+              ></lightning-spinner>
+            </div>
+          </template>
+
+          <template lwc:if={noResult}>
+            <c-org-intel-empty-state
+              title="The setup of this object has not been analyzed yet"
+              message="Takes a few seconds, reads the metadata only."
+              icon-name="utility:layout"
+            >
+              <lightning-button
+                variant="brand"
+                label="Run analysis"
+                icon-name="utility:play"
+                disabled={isRunning}
+                onclick={handleRun}
+              ></lightning-button>
+            </c-org-intel-empty-state>
+          </template>
+
+          <template lwc:if={hasResult}>
+            <!-- Tuiles : un clic filtre les constats et ouvre le bloc du thème -->
+            <div class="os-tiles">
+              <template for:each={tiles} for:item="tile">
+                <button
+                  key={tile.key}
+                  type="button"
+                  class={tile.className}
+                  data-theme={tile.theme}
+                  aria-pressed={tile.pressed}
+                  title={tile.title}
+                  onclick={handleTile}
+                >
+                  <span class="os-tile-label">{tile.label}</span>
+                  <span class="os-tile-value">{tile.value}</span>
+                  <span class="os-tile-caption">{tile.caption}</span>
+                </button>
+              </template>
+            </div>
+
+            <p class="os-summary os-muted" title={summaryText}>{summaryText}</p>
+
+            <template lwc:if={notes}>
+              <p class="os-notes" title={notes}>
+                <lightning-icon
+                  icon-name="utility:warning"
+                  size="xx-small"
+                  alternative-text="Warning"
+                ></lightning-icon>
+                <span class="os-notes-text">{notes}</span>
+              </p>
+            </template>
+
+            <!-- Constats -->
+            <article class="os-card">
+              <div class="os-card-head">
+                <span class="os-card-title">
+                  {findingsTitle}
+                  <lightning-helptext
+                    content="Click a finding for the advice and a link to Setup. Info findings are not sent to Recommendations."
+                  ></lightning-helptext>
+                </span>
+                <template lwc:if={hasThemeFilter}>
+                  <button
+                    type="button"
+                    class="os-link-button"
+                    onclick={handleClearTheme}
+                  >
+                    Show all
+                  </button>
+                </template>
+                <div class="os-card-actions">
+                  <lightning-button
+                    label={sendLabel}
+                    icon-name="utility:task"
+                    disabled={sendDisabled}
+                    onclick={handleSend}
+                  ></lightning-button>
+                  <c-org-intel-export-menu
+                    compact
+                    disabled={isSending}
+                    alternative-text="Export the findings"
+                    onexport={handleExportFindings}
+                  ></c-org-intel-export-menu>
+                </div>
+              </div>
+              <template lwc:if={hasFindings}>
+                <ul class="os-findings">
+                  <template for:each={findingRows} for:item="f">
+                    <li key={f.id} class="os-finding">
+                      <div
+                        class="os-finding-row"
+                        role="button"
+                        tabindex="0"
+                        data-id={f.id}
+                        aria-expanded={f.ariaExpanded}
+                        onclick={handleToggleFinding}
+                        onkeydown={handleFindingKey}
+                      >
+                        <lightning-icon
+                          icon-name={f.icon}
+                          size="xx-small"
+                        ></lightning-icon>
+                        <c-org-intel-badge
+                          label={f.severity}
+                          tone={f.tone}
+                        ></c-org-intel-badge>
+                        <span class="os-finding-title">{f.title}</span>
+                        <span class="os-finding-element" title={f.element}
+                          >{f.element}</span
+                        >
+                        <span class="os-muted os-finding-theme">{f.theme}</span>
+                      </div>
+                      <template lwc:if={f.expanded}>
+                        <div class="os-finding-detail">
+                          <p>{f.advice}</p>
+                          <a href={f.setupUrl} target="_blank" rel="noopener"
+                            >Open in Setup</a
+                          >
+                        </div>
+                      </template>
+                    </li>
+                  </template>
+                </ul>
+              </template>
+              <template lwc:else>
+                <p class="os-muted os-empty">No finding.</p>
+              </template>
+            </article>
+
+            <!-- Blocs par thème -->
+            <template for:each={blocks} for:item="block">
+              <article key={block.key} class="os-card">
+                <div class="os-card-head">
+                  <button
+                    type="button"
+                    class="os-block-toggle"
+                    data-key={block.key}
+                    aria-expanded={block.ariaExpanded}
+                    onclick={handleToggleBlock}
+                  >
+                    <lightning-icon
+                      icon-name={block.icon}
+                      size="xx-small"
+                    ></lightning-icon>
+                    <span class="os-card-title">{block.label}</span>
+                    <span class="os-count">{block.countText}</span>
+                  </button>
+                  <template lwc:if={block.open}>
+                    <div class="os-card-actions">
+                      <template lwc:if={block.isAssignments}>
+                        <span class="os-muted">{matrixCountText}</span>
+                        <lightning-input
+                          type="toggle"
+                          label="Profiles with users only"
+                          checked={activeProfilesOnly}
+                          onchange={handleActiveProfiles}
+                          message-toggle-active=""
+                          message-toggle-inactive=""
+                        ></lightning-input>
+                      </template>
+                      <template lwc:if={block.isCompact}>
+                        <span class="os-muted">{defaultCompactText}</span>
+                      </template>
+                      <c-org-intel-export-menu
+                        compact
+                        data-key={block.key}
+                        alternative-text="Export the list"
+                        onexport={handleExportBlock}
+                      ></c-org-intel-export-menu>
+                    </div>
+                  </template>
+                </div>
+
+                <template lwc:if={block.open}>
+                  <!-- Types d'enregistrement -->
+                  <template lwc:if={block.isRecordTypes}>
+                    <template lwc:if={hasRecordTypes}>
+                      <div class="os-table-scroll">
+                        <table class="os-table">
+                          <thead>
+                            <tr>
+                              <th scope="col">Record type</th>
+                              <th scope="col">Status</th>
+                              <th scope="col">Business process</th>
+                              <th scope="col">Has records</th>
+                              <th scope="col">Layouts</th>
+                              <th scope="col">
+                                For me
+                                <lightning-helptext
+                                  content="Default or available for your own profile. Defaults of the other profiles are not read (Metadata API)."
+                                ></lightning-helptext>
+                              </th>
+                              <th scope="col">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template for:each={recordTypeRows} for:item="t">
+                              <tr key={t.id}>
+                                <td>
+                                  <span class="os-strong">{t.name}</span>
+                                  <span class="os-muted os-block-line"
+                                    >{t.developerName}</span
+                                  >
+                                </td>
+                                <td>
+                                  <c-org-intel-badge
+                                    label={t.activeText}
+                                    tone={t.activeTone}
+                                  ></c-org-intel-badge>
+                                </td>
+                                <td>{t.businessProcess}</td>
+                                <td>{t.recordsText}</td>
+                                <td>{t.layoutText}</td>
+                                <td>{t.mineText}</td>
+                                <td class="os-wrap">{t.description}</td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </template>
+                    <template lwc:else>
+                      <p class="os-muted os-empty">
+                        No record type: every record uses Master.
+                      </p>
+                    </template>
+                  </template>
+
+                  <!-- Présentations -->
+                  <template lwc:if={block.isLayouts}>
+                    <template lwc:if={hasLayouts}>
+                      <div class="os-table-scroll">
+                        <table class="os-table">
+                          <thead>
+                            <tr>
+                              <th scope="col">Layout</th>
+                              <th scope="col">Fields</th>
+                              <th scope="col">Sections</th>
+                              <th scope="col">Related lists</th>
+                              <th scope="col">Profiles</th>
+                              <th scope="col">Last modified</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template for:each={layoutRows} for:item="l">
+                              <tr key={l.id}>
+                                <td>
+                                  <a href={l.url} target="_blank" rel="noopener"
+                                    >{l.name}</a
+                                  >
+                                  <template lwc:if={l.namespacePrefix}>
+                                    <span class="os-muted">
+                                      · {l.namespacePrefix}</span
+                                    >
+                                  </template>
+                                  <template lwc:if={l.unassigned}>
+                                    <c-org-intel-badge
+                                      class="os-inline-badge"
+                                      label="Unassigned"
+                                      tone="warning"
+                                    ></c-org-intel-badge>
+                                  </template>
+                                </td>
+                                <td>{l.fieldsText}</td>
+                                <td>{l.sectionsText}</td>
+                                <td>{l.relatedText}</td>
+                                <td>{l.profilesText}</td>
+                                <td title={l.lastModifiedBy}>
+                                  {l.modifiedText}
+                                </td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </template>
+                    <template lwc:else>
+                      <p class="os-muted os-empty">No layout read.</p>
+                    </template>
+                  </template>
+
+                  <!-- Matrice des assignations -->
+                  <template lwc:if={block.isAssignments}>
+                    <template lwc:if={hasMatrix}>
+                      <div class="os-table-scroll os-matrix-scroll">
+                        <table class="os-table os-matrix">
+                          <thead>
+                            <tr>
+                              <th scope="col">Profile</th>
+                              <th scope="col">Users</th>
+                              <template for:each={matrixColumns} for:item="c">
+                                <th key={c.key} scope="col">{c.label}</th>
+                              </template>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template for:each={matrixRows} for:item="p">
+                              <tr key={p.profileId}>
+                                <th scope="row" class="os-row-head">
+                                  {p.profileName}
+                                </th>
+                                <td>{p.activeUsers}</td>
+                                <template for:each={p.cells} for:item="cell">
+                                  <td key={cell.key}>
+                                    <span
+                                      class={cell.className}
+                                      title={cell.layout}
+                                      >{cell.layout}</span
+                                    >
+                                  </td>
+                                </template>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </template>
+                    <template lwc:else>
+                      <p class="os-muted os-empty">No assignment read.</p>
+                    </template>
+                  </template>
+
+                  <!-- Pages Lightning -->
+                  <template lwc:if={block.isPages}>
+                    <template lwc:if={hasPages}>
+                      <div class="os-table-scroll">
+                        <table class="os-table">
+                          <thead>
+                            <tr>
+                              <th scope="col">Lightning page</th>
+                              <th scope="col">Dynamic Forms</th>
+                              <th scope="col">Dynamic Actions</th>
+                              <th scope="col">Components</th>
+                              <th scope="col">Tabs</th>
+                              <th scope="col">Visibility rules</th>
+                              <th scope="col">
+                                Activation
+                                <lightning-helptext
+                                  content="Activation by app, profile and record type is not read: check it in the Lightning App Builder."
+                                ></lightning-helptext>
+                              </th>
+                              <th scope="col">Last modified</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template for:each={pageRows} for:item="p">
+                              <tr key={p.id}>
+                                <td>
+                                  <a href={p.url} target="_blank" rel="noopener"
+                                    >{p.name}</a
+                                  >
+                                </td>
+                                <td>
+                                  <c-org-intel-badge
+                                    label={p.dynamicFormsText}
+                                    tone={p.dynamicFormsTone}
+                                  ></c-org-intel-badge>
+                                </td>
+                                <td>{p.dynamicActionsText}</td>
+                                <td>{p.componentsText}</td>
+                                <td>{p.tabsText}</td>
+                                <td>{p.visibilityText}</td>
+                                <td class="os-muted">Not read</td>
+                                <td>{p.modifiedText}</td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </template>
+                    <template lwc:else>
+                      <p class="os-muted os-empty">No Lightning record page.</p>
+                    </template>
+                  </template>
+
+                  <!-- Présentations compactes -->
+                  <template lwc:if={block.isCompact}>
+                    <template lwc:if={hasCompact}>
+                      <div class="os-table-scroll">
+                        <table class="os-table">
+                          <thead>
+                            <tr>
+                              <th scope="col">Compact layout</th>
+                              <th scope="col">Default</th>
+                              <th scope="col">Record types</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template for:each={compactRows} for:item="c">
+                              <tr key={c.id}>
+                                <td>
+                                  <a href={c.url} target="_blank" rel="noopener"
+                                    >{c.name}</a
+                                  >
+                                </td>
+                                <td>{c.defaultText}</td>
+                                <td>{c.recordTypesText}</td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+                    </template>
+                    <template lwc:else>
+                      <p class="os-muted os-empty">
+                        Only the system default compact layout.
+                      </p>
+                    </template>
+                  </template>
+                </template>
+              </article>
+            </template>
+          </template>
+        </template>
+      </section>
+    </div>
+  </div>
+</template>

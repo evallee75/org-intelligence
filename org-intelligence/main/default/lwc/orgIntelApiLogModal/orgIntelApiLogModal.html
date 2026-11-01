@@ -1,0 +1,114 @@
+<template>
+  <lightning-modal-header label="API call detail"></lightning-modal-header>
+  <lightning-modal-body>
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the call"
+          size="small"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <p class="error">{error}</p>
+    </template>
+    <template lwc:else>
+      <dl class="facts">
+        <div>
+          <dt>Log</dt>
+          <dd>{row.name}</dd>
+        </div>
+        <div>
+          <dt>When</dt>
+          <dd>{when}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>
+            <c-org-intel-badge
+              label={statusLabel}
+              tone={statusTone}
+            ></c-org-intel-badge>
+          </dd>
+        </div>
+        <div>
+          <dt>HTTP</dt>
+          <dd>{row.statusCode}</dd>
+        </div>
+        <div>
+          <dt>System</dt>
+          <dd>{row.systemName}</dd>
+        </div>
+        <div>
+          <dt>Direction</dt>
+          <dd>{row.direction}</dd>
+        </div>
+        <div>
+          <dt>Operation</dt>
+          <dd>{row.operation}</dd>
+        </div>
+        <div>
+          <dt>Duration</dt>
+          <dd>{row.durationMs} ms</dd>
+        </div>
+        <template lwc:if={row.userName}>
+          <div>
+            <dt>User</dt>
+            <dd>{row.userName}</dd>
+          </div>
+        </template>
+        <template lwc:if={contextUrl}>
+          <div>
+            <dt>Record / scan</dt>
+            <dd><a href={contextUrl} target="_self">{contextLabel}</a></dd>
+          </div>
+        </template>
+        <div class="wide">
+          <dt>Endpoint</dt>
+          <dd><code>{row.method} {row.endpoint}</code></dd>
+        </div>
+        <template lwc:if={row.errorMessage}>
+          <div class="wide">
+            <dt>Error</dt>
+            <dd class="error">{row.errorMessage}</dd>
+          </div>
+        </template>
+      </dl>
+      <div class="payloads">
+        <div class="payload">
+          <div class="payload-head">
+            <h3>Request</h3>
+            <lightning-button-icon
+              icon-name="utility:copy"
+              alternative-text="Copy the request"
+              onclick={handleCopyRequest}
+            ></lightning-button-icon>
+          </div>
+          <pre class="code">{request}</pre>
+        </div>
+        <div class="payload">
+          <div class="payload-head">
+            <h3>Response</h3>
+            <lightning-button-icon
+              icon-name="utility:copy"
+              alternative-text="Copy the response"
+              onclick={handleCopyResponse}
+            ></lightning-button-icon>
+          </div>
+          <pre class="code">{response}</pre>
+        </div>
+      </div>
+      <p class="muted">
+        <lightning-icon
+          icon-name="utility:lock"
+          size="xx-small"
+        ></lightning-icon>
+        <span>Secrets are masked before storage.</span>
+        <span class="copied" aria-live="polite">{copied}</span>
+      </p>
+    </template>
+  </lightning-modal-body>
+  <lightning-modal-footer>
+    <lightning-button label="Close" onclick={handleClose}></lightning-button>
+  </lightning-modal-footer>
+</template>

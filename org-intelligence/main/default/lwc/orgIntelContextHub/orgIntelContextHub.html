@@ -1,0 +1,244 @@
+<template>
+  <div class="hub">
+    <div class="toolbar">
+      <h2 class="page-title">
+        Context Hub
+        <lightning-helptext
+          content="Prepare the context of a recommendation for Claude, ChatGPT or any assistant. You choose what is included and you copy or download it yourself."
+        ></lightning-helptext>
+      </h2>
+      <span class="guarantee">
+        <lightning-icon
+          icon-name="utility:shield"
+          size="xx-small"
+        ></lightning-icon>
+        Nothing is ever sent automatically to an AI.
+      </span>
+    </div>
+
+    <template lwc:if={listError}>
+      <c-org-intel-error-panel
+        title="The recommendations could not be loaded"
+        error={listError}
+      ></c-org-intel-error-panel>
+    </template>
+
+    <div class="layout">
+      <!-- Sélection -->
+      <article class="card config">
+        <h3 class="card-title">1. Recommendation</h3>
+        <lightning-combobox
+          label="Recommendation"
+          variant="label-hidden"
+          placeholder="Choose a recommendation…"
+          options={recommendationOptions}
+          value={selectedId}
+          onchange={handleRecommendation}
+          dropdown-alignment="auto"
+        ></lightning-combobox>
+        <template lwc:if={noRecommendation}>
+          <p class="muted hint">No recommendation yet: run a scan.</p>
+        </template>
+
+        <h3 class="card-title step">2. Sections</h3>
+        <ul class="options options-grid">
+          <template for:each={sectionOptions} for:item="option">
+            <li key={option.value} class="option-row">
+              <label class="option">
+                <input
+                  type="checkbox"
+                  data-value={option.value}
+                  checked={option.checked}
+                  onchange={handleSectionToggle}
+                />
+                <span class="option-label">{option.label}</span>
+              </label>
+              <lightning-helptext content={option.help}></lightning-helptext>
+            </li>
+          </template>
+        </ul>
+
+        <div class="step step-head">
+          <h3 class="card-title">
+            3. Comments
+            <lightning-helptext content={commentsHelp}></lightning-helptext>
+          </h3>
+          <template lwc:if={hasComments}>
+            <lightning-button
+              variant="base"
+              label="Select all"
+              onclick={handleSelectAllComments}
+            ></lightning-button>
+          </template>
+        </div>
+        <template lwc:if={hasComments}>
+          <ul class="options">
+            <template for:each={comments} for:item="comment">
+              <li key={comment.id}>
+                <label class="option" title={comment.text}>
+                  <input
+                    type="checkbox"
+                    data-id={comment.id}
+                    checked={comment.checked}
+                    onchange={handleCommentToggle}
+                  />
+                  <span class="comment">
+                    <span class="comment-meta"
+                      >{comment.authorName} · {comment.when}</span
+                    >
+                    <span class="comment-text">{comment.text}</span>
+                  </span>
+                </label>
+              </li>
+            </template>
+          </ul>
+        </template>
+        <template lwc:else>
+          <p class="muted">No comment.</p>
+        </template>
+      </article>
+
+      <!-- Aperçu -->
+      <article class="card preview">
+        <header class="preview-header">
+          <h3 class="card-title">
+            Preview
+            <span class="muted stats">{previewStats}</span>
+          </h3>
+          <div class="preview-actions">
+            <lightning-button
+              label="Download .md"
+              icon-name="utility:download"
+              disabled={actionsDisabled}
+              onclick={handleDownload}
+            ></lightning-button>
+            <lightning-button
+              variant="brand"
+              label="Copy"
+              icon-name="utility:copy"
+              disabled={actionsDisabled}
+              onclick={handleCopy}
+            ></lightning-button>
+          </div>
+        </header>
+
+        <template lwc:if={sourcesError}>
+          <c-org-intel-error-panel
+            title="The context could not be prepared"
+            error={sourcesError}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:elseif={previewError}>
+          <c-org-intel-error-panel
+            title="The preview could not be generated"
+            error={previewError}
+          ></c-org-intel-error-panel>
+        </template>
+        <template lwc:elseif={hasPreview}>
+          <p class="notice">
+            <lightning-icon
+              icon-name="utility:lock"
+              size="xx-small"
+            ></lightning-icon>
+            <span>{redactionText} Source code is never included.</span>
+          </p>
+          <div class="preview-body">
+            <template lwc:if={isBuilding}>
+              <lightning-spinner
+                alternative-text="Updating the preview"
+                size="small"
+              ></lightning-spinner>
+            </template>
+            <pre class="markdown" tabindex="0">{result.content}</pre>
+          </div>
+        </template>
+        <template lwc:elseif={isLoadingSources}>
+          <div class="loading" role="status">
+            <lightning-spinner
+              alternative-text="Preparing the context"
+              size="medium"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:else>
+          <c-org-intel-empty-state
+            title="Choose a recommendation"
+            message="The preview is exactly what you will copy."
+            icon-name="utility:share"
+          ></c-org-intel-empty-state>
+        </template>
+      </article>
+    </div>
+
+    <!-- Historique des exports -->
+    <article class="card">
+      <header class="history-header">
+        <h3 class="card-title">
+          Export history
+          <lightning-helptext
+            content="What you exported and when. The content itself is never stored, only its size and fingerprint (SHA-256)."
+          ></lightning-helptext>
+          <c-org-intel-browser-badge
+            help="The export history stays in this browser only. Use the Data menu to save it to a file or merge the history of another administrator."
+          ></c-org-intel-browser-badge>
+        </h3>
+        <div class="history-actions">
+          <c-org-intel-data-menu
+            kind="context-exports"
+            allow-clear
+            disable-save={noExports}
+            clear-label="Clear the export history"
+            clear-message="Delete the export history stored in this browser? The exported files are not affected."
+            onsave={handleSaveHistory}
+            onopen={handleOpenHistory}
+            onclear={handleClearHistory}
+            onerror={handleDataError}
+          ></c-org-intel-data-menu>
+          <c-org-intel-export-menu
+            compact
+            disabled={noExports}
+            alternative-text="Export the export history"
+            onexport={handleExportHistory}
+          ></c-org-intel-export-menu>
+        </div>
+      </header>
+      <template lwc:if={hasExports}>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Recommendation</th>
+                <th scope="col">Action</th>
+                <th scope="col" class="num">Sections</th>
+                <th scope="col" class="num">Characters</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={exportRows} for:item="row">
+                <tr key={row.id}>
+                  <td>{row.when}</td>
+                  <td class="ellipsis" title={row.recommendationTitle}>
+                    <a
+                      href="#"
+                      data-id={row.recommendationId}
+                      onclick={handleOpenExported}
+                      >{row.recommendationName}</a
+                    >
+                    <span class="muted"> {row.recommendationTitle}</span>
+                  </td>
+                  <td>{row.action}</td>
+                  <td class="num" title={row.sections}>{row.sectionCount}</td>
+                  <td class="num">{row.size}</td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+      <template lwc:else>
+        <p class="card-empty">No export yet.</p>
+      </template>
+    </article>
+  </div>
+</template>

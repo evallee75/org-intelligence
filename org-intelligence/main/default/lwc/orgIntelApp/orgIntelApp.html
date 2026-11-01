@@ -1,0 +1,270 @@
+<template>
+  <div class={appClass}>
+    <header class="hero">
+      <div class="hero-mark" aria-hidden="true">
+        <lightning-icon
+          icon-name="utility:einstein"
+          size="x-small"
+          variant="inverse"
+        ></lightning-icon>
+      </div>
+      <div class="hero-text">
+        <h1 class="hero-title">Org Intelligence</h1>
+        <p class="hero-subtitle">
+          Understand your Salesforce org, spot risks and prioritize
+          improvements.
+        </p>
+      </div>
+      <template lwc:if={runningScan}>
+        <div class="hero-scan" role="status" data-id="scan-progress">
+          <button
+            type="button"
+            class="hero-scan-open"
+            title={scanProgressTitle}
+            onclick={handleOpenRunningScan}
+          >
+            <lightning-icon
+              icon-name="utility:spinner"
+              size="xx-small"
+              variant="inverse"
+              alternative-text="Scan in progress"
+            ></lightning-icon>
+            <span class="hero-scan-text">{scanProgressText}</span>
+            <span class="hero-scan-track" aria-hidden="true">
+              <span class="hero-scan-fill" style={scanProgressStyle}></span>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="hero-scan-stop"
+            onclick={handleStopScan}
+            disabled={stopScanDisabled}
+            title="Stop the scan after the current step"
+          >
+            {stopScanLabel}
+          </button>
+        </div>
+      </template>
+      <div class="theme-switch" role="radiogroup" aria-label="Theme">
+        <template for:each={themeOptions} for:item="option">
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            class={option.className}
+            aria-checked={option.checked}
+            data-value={option.value}
+            title={option.title}
+            onclick={handleTheme}
+          >
+            {option.label}
+          </button>
+        </template>
+      </div>
+    </header>
+
+    <div class={layoutClass}>
+      <div class="oi-nav-slot">
+        <nav class={navClass} aria-label="Org Intelligence sections">
+          <div class="nav-pin">
+            <lightning-button-icon
+              icon-name={pinIcon}
+              variant="bare"
+              size="small"
+              alternative-text={pinLabel}
+              title={pinLabel}
+              onclick={handleTogglePin}
+            ></lightning-button-icon>
+          </div>
+          <ul class="nav-list">
+            <template for:each={navItems} for:item="item">
+              <li key={item.name}>
+                <template lwc:if={item.groupLabel}>
+                  <span class="nav-group">{item.groupLabel}</span>
+                </template>
+                <a
+                  href="#"
+                  class={item.className}
+                  data-section={item.name}
+                  aria-current={item.ariaCurrent}
+                  onclick={handleNavClick}
+                >
+                  <lightning-icon
+                    icon-name={item.icon}
+                    size="x-small"
+                    class="nav-icon"
+                  ></lightning-icon>
+                  <span class="nav-label" title={item.label}>{item.label}</span>
+                  <template lwc:if={item.soon}>
+                    <span class="nav-soon">Soon</span>
+                  </template>
+                </a>
+                <template lwc:if={isCustomizingNav}>
+                  <template lwc:if={item.locked}>
+                    <lightning-icon
+                      class="nav-lock"
+                      icon-name="utility:lock"
+                      size="xx-small"
+                      alternative-text="Always shown"
+                      title="Always shown"
+                    ></lightning-icon>
+                  </template>
+                  <template lwc:else>
+                    <lightning-button-icon
+                      class="nav-visibility"
+                      icon-name={item.visibilityIcon}
+                      variant="bare"
+                      size="small"
+                      alternative-text={item.visibilityLabel}
+                      title={item.visibilityLabel}
+                      data-section={item.name}
+                      onclick={handleToggleSection}
+                    ></lightning-button-icon>
+                  </template>
+                </template>
+              </li>
+            </template>
+          </ul>
+          <div class="nav-customize">
+            <lightning-button
+              variant="base"
+              label={customizeLabel}
+              icon-name={customizeIcon}
+              onclick={handleCustomizeNav}
+            ></lightning-button>
+            <template lwc:if={canResetNav}>
+              <lightning-button
+                variant="base"
+                label="Show all"
+                onclick={handleResetNav}
+              ></lightning-button>
+            </template>
+          </div>
+        </nav>
+      </div>
+
+      <main class="oi-content">
+        <template lwc:if={isModuleMissing}>
+          <h2 class="section-title">{current.label}</h2>
+          <c-org-intel-empty-state
+            icon-name={current.icon}
+            title="This module is not installed"
+            message={missingModuleMessage}
+            data-id="module-missing"
+          >
+            <lightning-button
+              variant="brand"
+              label="Open Modules"
+              icon-name="utility:apps"
+              onclick={handleOpenModules}
+            ></lightning-button>
+          </c-org-intel-empty-state>
+        </template>
+        <template lwc:elseif={isOverview}>
+          <c-org-intel-overview
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-overview>
+        </template>
+        <template lwc:elseif={isScanner}>
+          <c-org-intel-scanner
+            scan-id={scanId}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-scanner>
+        </template>
+        <template lwc:elseif={isRecommendations}>
+          <c-org-intel-recommendations
+            modules={installedModules}
+            record-id={recordId}
+            severity={severity}
+            search-term={search}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-recommendations>
+        </template>
+        <template lwc:elseif={isAutomation}>
+          <c-org-intel-automation
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-automation>
+        </template>
+        <template lwc:elseif={isStorage}>
+          <c-org-intel-storage
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-storage>
+        </template>
+        <template lwc:elseif={isFieldUsage}>
+          <c-org-intel-field-usage
+            modules={installedModules}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-field-usage>
+        </template>
+        <template lwc:elseif={isObjectSetup}>
+          <c-org-intel-object-setup></c-org-intel-object-setup>
+        </template>
+        <template lwc:elseif={isAdoption}>
+          <c-org-intel-adoption
+            modules={installedModules}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-adoption>
+        </template>
+        <template lwc:elseif={isRoadmap}>
+          <c-org-intel-roadmap
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-roadmap>
+        </template>
+        <template lwc:elseif={isInventory}>
+          <c-org-intel-inventory></c-org-intel-inventory>
+        </template>
+        <template lwc:elseif={isSecurity}>
+          <c-org-intel-security
+            modules={installedModules}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-security>
+        </template>
+        <template lwc:elseif={isPermissions}>
+          <c-org-intel-permissions
+            modules={installedModules}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-permissions>
+        </template>
+        <template lwc:elseif={isContextHub}>
+          <c-org-intel-context-hub
+            record-id={recordId}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-context-hub>
+        </template>
+        <template lwc:elseif={isApiMonitoring}>
+          <c-org-intel-api-monitor></c-org-intel-api-monitor>
+        </template>
+        <template lwc:elseif={isReports}>
+          <c-org-intel-reports></c-org-intel-reports>
+        </template>
+        <template lwc:elseif={isModules}>
+          <c-org-intel-module-setup
+            onmodulechange={handleModuleChange}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-module-setup>
+        </template>
+        <template lwc:elseif={isSettings}>
+          <c-org-intel-settings
+            modules={installedModules}
+            onnavigate={handleChildNavigate}
+          ></c-org-intel-settings>
+        </template>
+        <template lwc:elseif={modulesLoaded}>
+          <h2 class="section-title">{current.label}</h2>
+          <c-org-intel-empty-state
+            variant="unavailable"
+            icon-name={current.icon}
+            title="This section is not available yet"
+            message={current.description}
+          ></c-org-intel-empty-state>
+        </template>
+        <template lwc:else>
+          <lightning-spinner
+            alternative-text="Loading Org Intelligence"
+            size="medium"
+          ></lightning-spinner>
+        </template>
+      </main>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomNotificationType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customNotifTypeName>Org Intelligence</customNotifTypeName>
+    <description
+  >Notifications Org Intelligence : assignation d&apos;une recommandation, fin de scan.</description>
+    <desktop>true</desktop>
+    <masterLabel>Org Intelligence</masterLabel>
+    <mobile>true</mobile>
+</CustomNotificationType>

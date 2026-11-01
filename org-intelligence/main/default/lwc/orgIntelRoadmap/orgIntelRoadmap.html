@@ -1,0 +1,549 @@
+<template>
+  <div class="roadmap">
+    <div class="toolbar">
+      <div>
+        <h2 class="page-title">
+          Roadmap
+          <lightning-helptext
+            content="The order in which to fix the recommendations, computed in your browser from their severity, category and estimated effort. Your settings and adjustments are kept in this browser; nothing is stored in the org."
+          ></lightning-helptext>
+        </h2>
+        <p class="muted">{subtitle}</p>
+        <template lwc:if={isLocal}>
+          <c-org-intel-browser-badge
+            help="The recommendations, your settings and adjustments stay in this browser. Save the recommendations to a file from the Recommendations section to share them."
+          ></c-org-intel-browser-badge>
+        </template>
+      </div>
+      <div class="toolbar-actions">
+        <lightning-button-menu
+          alternative-text="Share the roadmap"
+          icon-name="utility:share"
+          menu-alignment="right"
+          disabled={isLoading}
+          onselect={handleShare}
+        >
+          <lightning-menu-item
+            value="copy"
+            label="Copy as Markdown"
+            prefix-icon-name="utility:copy"
+          ></lightning-menu-item>
+          <lightning-menu-item
+            value="download"
+            label="Download Markdown"
+            prefix-icon-name="utility:download"
+          ></lightning-menu-item>
+        </lightning-button-menu>
+        <c-org-intel-export-menu
+          compact
+          disabled={isLoading}
+          alternative-text="Export the roadmap"
+          onexport={handleExport}
+        ></c-org-intel-export-menu>
+        <lightning-button-icon
+          icon-name="utility:refresh"
+          alternative-text="Reload the recommendations"
+          title="Reload the recommendations"
+          onclick={handleReload}
+        ></lightning-button-icon>
+      </div>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the recommendations"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The recommendations could not be loaded"
+        error={error}
+        show-retry
+        onretry={load}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:else>
+      <!-- Barre unique : stratégie, réglages, recherche, filtres, vue -->
+      <section class="controls" aria-label="Roadmap settings">
+        <div class="segments" role="group" aria-label="Strategy">
+          <template for:each={strategyButtons} for:item="strategy">
+            <button
+              key={strategy.value}
+              class={strategy.className}
+              aria-pressed={strategy.pressed}
+              title={strategy.description}
+              data-value={strategy.value}
+              onclick={handleStrategy}
+            >
+              {strategy.label}
+            </button>
+          </template>
+        </div>
+        <button
+          class="link"
+          onclick={handleToggleSettings}
+          title="Capacity and rhythm"
+        >
+          <lightning-icon
+            icon-name="utility:settings"
+            size="xx-small"
+            alternative-text=""
+          ></lightning-icon>
+          {settingsSummary}
+        </button>
+        <lightning-input
+          type="search"
+          class="search"
+          label="Search"
+          variant="label-hidden"
+          placeholder="Search a topic…"
+          value={filters.search}
+          onchange={handleSearch}
+        ></lightning-input>
+        <lightning-button
+          label={filtersLabel}
+          variant={filtersVariant}
+          icon-name="utility:filterList"
+          onclick={handleToggleFilters}
+        ></lightning-button>
+        <div class="segments" role="group" aria-label="View">
+          <template for:each={viewButtons} for:item="v">
+            <button
+              key={v.value}
+              class={v.className}
+              aria-pressed={v.pressed}
+              data-value={v.value}
+              onclick={handleView}
+            >
+              {v.label}
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <template lwc:if={hasActiveFilterPills}>
+        <div class="pills">
+          <template for:each={activeFilterPills} for:item="pill">
+            <button
+              key={pill.key}
+              class="pill"
+              data-list={pill.list}
+              data-value={pill.value}
+              onclick={handleRemovePill}
+              title="Remove this filter"
+            >
+              {pill.label} ✕
+            </button>
+          </template>
+          <button class="link" onclick={handleClearFilters}>Clear</button>
+        </div>
+      </template>
+
+      <template lwc:if={showSettings}>
+        <div class="rm-panel settings">
+          <lightning-combobox
+            label="Rhythm"
+            options={rhythmOptions}
+            value={settings.rhythm}
+            onchange={handleRhythm}
+          ></lightning-combobox>
+          <lightning-input
+            type="number"
+            label="Days of work per period"
+            field-level-help="Time the team can give to these fixes in each period (e.g. 1 person half-time over 2 weeks = 5 days)."
+            min="0.25"
+            step="0.25"
+            value={settings.capacity}
+            onchange={handleCapacity}
+          ></lightning-input>
+          <lightning-input
+            type="date"
+            label="Start"
+            value={startDateValue}
+            onchange={handleStartDate}
+          ></lightning-input>
+          <lightning-input
+            type="number"
+            label="Periods shown"
+            min="1"
+            max="52"
+            value={settings.horizon}
+            onchange={handleHorizon}
+          ></lightning-input>
+          <lightning-input
+            type="toggle"
+            label="Schedule theme by theme"
+            field-level-help="Finishes a theme before starting the next one, to limit context switching."
+            checked={settings.byTheme}
+            message-toggle-active=""
+            message-toggle-inactive=""
+            onchange={handleByTheme}
+          ></lightning-input>
+          <template lwc:if={hasAdjustments}>
+            <lightning-button
+              variant="base"
+              label="Reset my adjustments"
+              onclick={handleResetAdjustments}
+            ></lightning-button>
+          </template>
+        </div>
+      </template>
+
+      <template lwc:if={showFilters}>
+        <div class="rm-panel filters">
+          <div class="filter-group">
+            <span class="filter-label">Themes</span>
+            <div class="chips" role="group" aria-label="Themes">
+              <template for:each={domainChips} for:item="chip">
+                <button
+                  key={chip.value}
+                  class={chip.className}
+                  style={chip.style}
+                  aria-pressed={chip.pressed}
+                  data-value={chip.value}
+                  onclick={handleDomainChip}
+                >
+                  {chip.label}
+                </button>
+              </template>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Severity</span>
+            <div class="chips" role="group" aria-label="Severities">
+              <template for:each={severityChips} for:item="chip">
+                <button
+                  key={chip.value}
+                  class={chip.className}
+                  aria-pressed={chip.pressed}
+                  data-value={chip.value}
+                  onclick={handleSeverityChip}
+                >
+                  {chip.label}
+                </button>
+              </template>
+            </div>
+          </div>
+          <div class="filter-group">
+            <lightning-combobox
+              lwc:if={isCollaborative}
+              label="Assigned"
+              variant="label-hidden"
+              options={assigneeOptions}
+              value={filters.assignee}
+              onchange={handleAssignee}
+            ></lightning-combobox>
+            <lightning-input
+              type="toggle"
+              label="Open only"
+              checked={filters.openOnly}
+              message-toggle-active=""
+              message-toggle-inactive=""
+              onchange={handleOpenOnly}
+            ></lightning-input>
+          </div>
+        </div>
+      </template>
+
+      <template lwc:if={hasItems}>
+        <!-- Gantt : une ligne par sujet, groupée par thème -->
+        <template lwc:if={isTimeline}>
+          <div class="gantt">
+            <div class="g-head">
+              <div class="g-label-col">
+                <button class="link" onclick={handleCollapseAll}>
+                  {collapseAllLabel}
+                </button>
+              </div>
+              <div class="g-periods">
+                <template for:each={periodHeaders} for:item="period">
+                  <div
+                    key={period.key}
+                    class="g-period"
+                    title={period.loadText}
+                  >
+                    <span class="period-label">{period.label}</span>
+                    <span class="period-range">{period.range}</span>
+                    <span class="load">
+                      <span class="load-fill" style={period.loadStyle}></span>
+                    </span>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <template for:each={ganttGroups} for:item="group">
+              <div key={group.theme} class="g-group" style={group.style}>
+                <div class="g-row g-theme">
+                  <button
+                    class="g-label-col g-theme-label"
+                    data-theme={group.theme}
+                    onclick={handleToggleTheme}
+                    aria-expanded={group.isCollapsed}
+                  >
+                    <lightning-icon
+                      icon-name={group.toggleIcon}
+                      size="xx-small"
+                      alternative-text="Toggle"
+                    ></lightning-icon>
+                    <span class="theme-name">{group.label}</span>
+                    <span class="theme-summary">{group.summary}</span>
+                  </button>
+                  <div class="g-track" style={trackStyle}>
+                    <span
+                      class="theme-bar"
+                      style={group.summaryBarStyle}
+                    ></span>
+                  </div>
+                </div>
+                <template for:each={group.rows} for:item="row">
+                  <div
+                    key={row.id}
+                    class={row.rowClass}
+                    data-id={row.id}
+                    title={row.tooltip}
+                    onclick={handleSelectTask}
+                  >
+                    <div class="g-label-col g-task">
+                      <span class={row.dotClass}></span>
+                      <span class="g-rank">{row.rank}</span>
+                      <span class="g-title">{row.title}</span>
+                      <span class="g-size">{row.size}</span>
+                    </div>
+                    <div class="g-track" style={trackStyle}>
+                      <span class={row.barClass} style={row.barStyle}></span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Vue plan : une carte par période -->
+        <template lwc:else>
+          <div class="plan">
+            <template for:each={planPeriods} for:item="period">
+              <article key={period.key} class="period-card">
+                <header class="period-card-head">
+                  <div>
+                    <span class="period-label">{period.label}</span>
+                    <span class="period-range">{period.range}</span>
+                  </div>
+                  <span class="period-load">
+                    <span class="load">
+                      <span class="load-fill" style={period.loadStyle}></span>
+                    </span>
+                    <span class="muted">{period.loadText}</span>
+                  </span>
+                </header>
+                <template lwc:if={period.empty}>
+                  <p class="muted continuation">
+                    Continuation of the topics started before.
+                  </p>
+                </template>
+                <ol class="plan-list">
+                  <template for:each={period.items} for:item="item">
+                    <li key={item.id} class="plan-row">
+                      <span class="rank">#{item.rank}</span>
+                      <c-org-intel-badge
+                        label={item.severity}
+                        tone={item.severityTone}
+                      ></c-org-intel-badge>
+                      <button
+                        class="plan-title"
+                        title={item.title}
+                        data-id={item.id}
+                        onclick={handleSelectTask}
+                      >
+                        {item.title}
+                        <span class="muted">{item.domain}</span>
+                      </button>
+                      <lightning-combobox
+                        class="size"
+                        label="Size"
+                        variant="label-hidden"
+                        options={sizeOptions}
+                        value={item.size}
+                        data-id={item.id}
+                        onchange={handleSize}
+                      ></lightning-combobox>
+                      <span class="row-actions">
+                        <lightning-button-icon
+                          icon-name="utility:arrowup"
+                          variant="bare"
+                          alternative-text="Move up"
+                          title="Move up"
+                          data-id={item.id}
+                          data-delta="1"
+                          onclick={handleBoost}
+                        ></lightning-button-icon>
+                        <lightning-button-icon
+                          icon-name="utility:arrowdown"
+                          variant="bare"
+                          alternative-text="Move down"
+                          title="Move down"
+                          data-id={item.id}
+                          data-delta="-1"
+                          onclick={handleBoost}
+                        ></lightning-button-icon>
+                        <lightning-button-icon
+                          icon-name="utility:close"
+                          variant="bare"
+                          alternative-text="Exclude from the roadmap"
+                          title="Exclude from the roadmap"
+                          data-id={item.id}
+                          onclick={handleExclude}
+                        ></lightning-button-icon>
+                      </span>
+                    </li>
+                  </template>
+                </ol>
+              </article>
+            </template>
+          </div>
+        </template>
+
+        <template lwc:if={hasBeyond}>
+          <p class="note">
+            <lightning-icon
+              icon-name="utility:info"
+              size="xx-small"
+              alternative-text="Note"
+            ></lightning-icon>
+            {beyondText} Increase the capacity or the number of periods shown.
+          </p>
+        </template>
+
+        <!-- Détail du sujet sélectionné -->
+        <template lwc:if={selected}>
+          <aside class="detail" aria-label="Selected topic">
+            <header class="detail-head">
+              <div>
+                <c-org-intel-badge
+                  label={selected.severity}
+                  tone={selected.severityTone}
+                ></c-org-intel-badge>
+                <span class="detail-title"
+                  >#{selected.rank} {selected.title}</span
+                >
+              </div>
+              <lightning-button-icon
+                icon-name="utility:close"
+                variant="bare"
+                alternative-text="Close"
+                onclick={handleCloseDetail}
+              ></lightning-button-icon>
+            </header>
+            <dl class="facts">
+              <dt>When</dt>
+              <dd>{selected.whenText}</dd>
+              <dt>Theme</dt>
+              <dd>{selected.domain} · {selected.category}</dd>
+              <dt>Component</dt>
+              <dd>{selected.componentName}</dd>
+              <template lwc:if={isCollaborative}>
+                <dt>Assigned to</dt>
+                <dd>{selected.assignedText}</dd>
+              </template>
+              <dt>Why this rank</dt>
+              <dd>{selected.reason}</dd>
+            </dl>
+            <div class="detail-actions">
+              <lightning-combobox
+                class="size"
+                label="Effort"
+                options={sizeOptions}
+                value={selected.size}
+                data-id={selected.id}
+                onchange={handleSize}
+              ></lightning-combobox>
+              <lightning-button
+                label="Move up"
+                icon-name="utility:arrowup"
+                data-id={selected.id}
+                data-delta="1"
+                onclick={handleBoost}
+                disabled={selected.boostUp}
+              ></lightning-button>
+              <lightning-button
+                label="Move down"
+                icon-name="utility:arrowdown"
+                data-id={selected.id}
+                data-delta="-1"
+                onclick={handleBoost}
+                disabled={selected.boostDown}
+              ></lightning-button>
+              <lightning-button
+                label="Exclude"
+                icon-name="utility:close"
+                data-id={selected.id}
+                onclick={handleExclude}
+              ></lightning-button>
+              <lightning-button
+                variant="brand"
+                label="Open the recommendation"
+                data-id={selected.id}
+                onclick={handleOpenRecommendation}
+              ></lightning-button>
+            </div>
+          </aside>
+        </template>
+      </template>
+      <template lwc:elseif={hasRows}>
+        <c-org-intel-empty-state
+          title="Nothing matches these filters"
+          message={filteredOutMessage}
+          icon-name="utility:filterList"
+        >
+          <lightning-button
+            variant="brand"
+            label="Clear filters"
+            onclick={handleClearAll}
+          ></lightning-button>
+        </c-org-intel-empty-state>
+      </template>
+      <template lwc:else>
+        <c-org-intel-empty-state
+          title="Nothing to plan yet"
+          message="Run a scan to get recommendations: the roadmap orders them for you."
+          icon-name="utility:date_time"
+        >
+          <lightning-button
+            variant="brand"
+            label="New scan"
+            icon-name="utility:search"
+            onclick={handleNewScan}
+          ></lightning-button>
+        </c-org-intel-empty-state>
+      </template>
+
+      <template lwc:if={hasExcluded}>
+        <div class="excluded">
+          <lightning-button
+            variant="base"
+            label={excludedLabel}
+            onclick={handleToggleExcluded}
+          ></lightning-button>
+          <template lwc:if={showExcluded}>
+            <ul class="excluded-list">
+              <template for:each={excludedItems} for:item="item">
+                <li key={item.id}>
+                  <span>{item.label}</span>
+                  <lightning-button
+                    variant="base"
+                    label="Restore"
+                    data-id={item.id}
+                    onclick={handleRestore}
+                  ></lightning-button>
+                </li>
+              </template>
+            </ul>
+          </template>
+        </div>
+      </template>
+    </template>
+  </div>
+</template>

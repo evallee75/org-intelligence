@@ -1,0 +1,20 @@
+<template>
+  <lightning-button-menu
+    label={buttonLabel}
+    icon-name="utility:download"
+    alternative-text={alternativeText}
+    title={alternativeText}
+    menu-alignment="auto"
+    disabled={disabled}
+    onselect={handleSelect}
+  >
+    <template for:each={formats} for:item="format">
+      <lightning-menu-item
+        key={format.value}
+        value={format.value}
+        label={format.label}
+        prefix-icon-name={format.icon}
+      ></lightning-menu-item>
+    </template>
+  </lightning-button-menu>
+</template>

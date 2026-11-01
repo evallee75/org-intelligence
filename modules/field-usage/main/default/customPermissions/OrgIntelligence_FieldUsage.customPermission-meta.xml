@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description
+  >Accès au module Field Usage (Objects &amp; Fields) d&apos;Org Intelligence (analyse d&apos;utilisation des champs, sans objet personnalisé).</description>
+    <isLicensed>false</isLicensed>
+    <label>Org Intelligence - Field Usage</label>
+</CustomPermission>

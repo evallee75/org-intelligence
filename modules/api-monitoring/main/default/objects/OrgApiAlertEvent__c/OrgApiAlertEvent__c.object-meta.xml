@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description
+  >Alerte déclenchée par une règle OrgApiAlertRule__c : valeur mesurée, fenêtre, canaux notifiés, tâche créée, statut de prise en compte.</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableLicensing>false</enableLicensing>
+    <enableReports>true</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <externalSharingModel>ControlledByParent</externalSharingModel>
+    <label>Org API Alert</label>
+    <nameField>
+        <displayFormat>ALERT-{00000}</displayFormat>
+        <label>Alert Number</label>
+        <trackHistory>false</trackHistory>
+        <startingNumber>1</startingNumber>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Org API Alerts</pluralLabel>
+    <searchLayouts />
+    <sharingModel>ControlledByParent</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>

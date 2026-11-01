@@ -1,0 +1,855 @@
+<template>
+  <div class="adoption">
+    <div class="toolbar">
+      <div>
+        <h2 class="page-title">Adoption</h2>
+        <p class="muted">
+          {subtitle}
+          <c-org-intel-browser-badge
+            help="The analysis, its history and your contract are kept in this browser, never in the org. Use the Data menu to save them to a file and open it on another browser or for another admin."
+          ></c-org-intel-browser-badge>
+        </p>
+      </div>
+      <div class="toolbar-actions">
+        <c-org-intel-data-menu
+          kind="adoption"
+          allow-clear
+          disable-save={noStoredData}
+          clear-message="Delete the adoption analysis, its history and the contract lines stored in this browser? Save them to a file first if you need them."
+          onsave={handleExportData}
+          onopen={handleDataOpen}
+          onclear={handleClearData}
+          onerror={handleDataError}
+        ></c-org-intel-data-menu>
+        <c-org-intel-export-menu
+          label="Export"
+          disabled={isLoading}
+          alternative-text="Export features, licenses, add-ons and contract"
+          onexport={handleExport}
+        ></c-org-intel-export-menu>
+        <lightning-button
+          variant="brand"
+          label={runLabel}
+          icon-name="utility:refresh"
+          onclick={handleRun}
+          disabled={isRunning}
+        ></lightning-button>
+      </div>
+    </div>
+
+    <template lwc:if={isLoading}>
+      <div class="loading" role="status">
+        <lightning-spinner
+          alternative-text="Loading the adoption analysis"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:elseif={error}>
+      <c-org-intel-error-panel
+        title="The adoption analysis could not be loaded"
+        error={error}
+        show-retry
+        onretry={handleRefresh}
+      ></c-org-intel-error-panel>
+    </template>
+    <template lwc:elseif={hasAnalysis}>
+      <template lwc:if={isRunning}>
+        <div class="running" role="status">
+          <lightning-spinner
+            alternative-text="Analyzing licenses and features"
+            size="small"
+          ></lightning-spinner>
+          <span>Analyzing licenses and features…</span>
+        </div>
+      </template>
+
+      <!-- Indicateurs : cliquables, détail dans l'aide -->
+      <section class="kpis" aria-label="Adoption indicators">
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          data-tab="features"
+          data-filter="gaps"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label"
+            >Feature adoption
+            <lightning-helptext content={scoreHelp}></lightning-helptext
+          ></span>
+          <span class="kpi-value">{scoreValue}</span>
+          <div class="meter" aria-hidden="true">
+            <div class={scoreMeter.className} style={scoreMeter.style}></div>
+          </div>
+          <span class="kpi-caption">{scoreCaption}</span>
+        </div>
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          data-tab="licenses"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label"
+            >Seats actively used
+            <lightning-helptext content={seatHelp}></lightning-helptext
+          ></span>
+          <span class="kpi-value">{seatValue}</span>
+          <div class="meter" aria-hidden="true">
+            <div class={seatMeter.className} style={seatMeter.style}></div>
+          </div>
+          <span class="kpi-caption">{seatCaption}</span>
+        </div>
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          data-tab="licenses"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label"
+            >Seats to reclaim
+            <lightning-helptext content={reclaimHelp}></lightning-helptext
+          ></span>
+          <span class="kpi-value">{reclaimValue}</span>
+          <span class="kpi-caption">{reclaimCaption}</span>
+          <template lwc:if={hasReclaimCost}>
+            <span class="kpi-cost">{reclaimCost}</span>
+          </template>
+        </div>
+        <div
+          class="kpi kpi-link"
+          role="button"
+          tabindex="0"
+          data-tab="features"
+          data-filter="Not used"
+          onclick={handleKpi}
+          onkeydown={handleKpiKey}
+        >
+          <span class="kpi-label">Features not used</span>
+          <span class="kpi-value">{unusedFeatureValue}</span>
+          <span class="kpi-caption">{unusedFeatureCaption}</span>
+        </div>
+      </section>
+
+      <template lwc:if={isSandboxAnalysis}>
+        <p class="note">
+          <lightning-icon
+            icon-name="utility:info"
+            size="xx-small"
+            alternative-text="Note"
+          ></lightning-icon>
+          Sandbox: usage figures reflect the sandbox, not production.
+        </p>
+      </template>
+      <template lwc:if={hasWarnings}>
+        <ul class="warnings">
+          <template for:each={warnings} for:item="warning">
+            <li key={warning.key}>{warning.text}</li>
+          </template>
+        </ul>
+      </template>
+
+      <!-- Clouds : tuiles compactes, clic = filtre des fonctionnalités -->
+      <section class="clouds" aria-label="Clouds">
+        <template for:each={clouds} for:item="cloud">
+          <button
+            key={cloud.name}
+            class={cloud.className}
+            title={cloud.tooltip}
+            data-name={cloud.name}
+            onclick={handleCloudClick}
+          >
+            <span class="cloud-header">
+              <span class="cloud-name">{cloud.name}</span>
+              <span class="cloud-scope">{cloud.scopeLabel}</span>
+            </span>
+            <span class="cloud-score">
+              <span class="cloud-value">{cloud.scoreText}</span>
+              <span class="meter meter-small" aria-hidden="true">
+                <span class={cloud.meterClass} style={cloud.meterStyle}></span>
+              </span>
+            </span>
+            <span class="cloud-gap">{cloud.gapText}</span>
+          </button>
+        </template>
+      </section>
+      <div class="cloud-actions">
+        <span class="muted">{scopeSourceText}</span>
+        <template lwc:if={contractFromContract}>
+          <lightning-button
+            variant="base"
+            label="Edit the contract"
+            data-tab="contract"
+            onclick={handleKpi}
+          ></lightning-button>
+        </template>
+        <template lwc:else>
+          <lightning-button
+            variant="base"
+            label="Choose clouds"
+            icon-name="utility:edit"
+            onclick={handleEditClouds}
+          ></lightning-button>
+        </template>
+      </div>
+      <template lwc:if={showCloudPicker}>
+        <div class="picker">
+          <lightning-checkbox-group
+            name="clouds"
+            label="Clouds you pay for"
+            options={cloudPickerOptions}
+            value={cloudDraft}
+            onchange={handleCloudDraft}
+          ></lightning-checkbox-group>
+          <div class="picker-actions">
+            <lightning-button
+              label="Cancel"
+              onclick={handleCancelClouds}
+            ></lightning-button>
+            <lightning-button
+              variant="brand"
+              label="Apply"
+              onclick={handleApplyClouds}
+              disabled={noCloudDraft}
+            ></lightning-button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Onglets -->
+      <div class="ad-tabs" role="tablist" aria-label="Adoption views">
+        <template for:each={tabs} for:item="tab">
+          <button
+            key={tab.name}
+            class={tab.className}
+            role="tab"
+            aria-selected={tab.selected}
+            data-name={tab.name}
+            onclick={handleTab}
+          >
+            {tab.label}
+            <span class="tab-count">{tab.count}</span>
+          </button>
+        </template>
+        <div class="tab-actions">
+          <template lwc:if={canSend}>
+            <template lwc:if={selectedCount}>
+              <lightning-button
+                variant="base"
+                label="Clear"
+                onclick={handleClearSelection}
+              ></lightning-button>
+              <lightning-button
+                variant="brand-outline"
+                label={sendLabel}
+                icon-name="utility:task"
+                onclick={handleSend}
+                disabled={sendDisabled}
+              ></lightning-button>
+            </template>
+            <template lwc:else>
+              <lightning-button
+                variant="base"
+                label="Select all gaps"
+                onclick={handleSelectGaps}
+              ></lightning-button>
+            </template>
+          </template>
+        </div>
+      </div>
+
+      <!-- Fonctionnalités : une ligne par fonctionnalité, détail au clic -->
+      <template lwc:if={isFeaturesTab}>
+        <div class="filters">
+          <lightning-input
+            type="search"
+            class="search"
+            label="Search a feature"
+            variant="label-hidden"
+            placeholder="Search a feature…"
+            value={search}
+            onchange={handleSearch}
+          ></lightning-input>
+          <lightning-combobox
+            label="Clouds"
+            variant="label-hidden"
+            options={cloudScopeOptions}
+            value={cloudScope}
+            onchange={handleCloudScope}
+          ></lightning-combobox>
+          <lightning-combobox
+            label="Status"
+            variant="label-hidden"
+            options={statusFilters}
+            value={statusFilter}
+            onchange={handleStatusFilter}
+          ></lightning-combobox>
+        </div>
+        <template lwc:if={hasVisibleFeatures}>
+          <template for:each={featureGroups} for:item="group">
+            <article key={group.name} class="card card-flush">
+              <header class="group-header">
+                <h3 class="card-title">{group.name}</h3>
+                <span class="muted">{group.countsText}</span>
+              </header>
+              <ul class="rows">
+                <template for:each={group.features} for:item="feature">
+                  <li key={feature.key} class="row-item">
+                    <div class="row">
+                      <span class="row-select">
+                        <template lwc:if={feature.actionable}>
+                          <input
+                            type="checkbox"
+                            aria-label={feature.checkboxLabel}
+                            data-key={feature.selectKey}
+                            checked={feature.checked}
+                            onchange={handleSelect}
+                          />
+                        </template>
+                      </span>
+                      <button
+                        class="row-main"
+                        aria-expanded={feature.expanded}
+                        data-key={feature.selectKey}
+                        onclick={handleToggle}
+                      >
+                        <lightning-icon
+                          icon-name={feature.toggleIcon}
+                          size="xx-small"
+                          alternative-text={feature.toggleLabel}
+                        ></lightning-icon>
+                        <span class="row-title">{feature.label}</span>
+                        <span class="row-metric">{feature.metric}</span>
+                      </button>
+                      <c-org-intel-badge
+                        label={feature.status}
+                        tone={feature.tone}
+                      ></c-org-intel-badge>
+                    </div>
+                    <template lwc:if={feature.expanded}>
+                      <div class="row-detail">
+                        <p>{feature.description}</p>
+                        <template lwc:if={feature.showAdvice}>
+                          <dl class="facts">
+                            <dt>Why it matters</dt>
+                            <dd>{feature.benefit}</dd>
+                            <dt>Next step</dt>
+                            <dd>{feature.nextStep}</dd>
+                          </dl>
+                        </template>
+                        <a
+                          href={feature.learnUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          >Learn on Trailhead</a
+                        >
+                      </div>
+                    </template>
+                  </li>
+                </template>
+              </ul>
+            </article>
+          </template>
+        </template>
+        <template lwc:else>
+          <c-org-intel-empty-state
+            title="No feature matches these filters"
+            message="Change the cloud or status filter."
+            icon-name="utility:filterList"
+          ></c-org-intel-empty-state>
+        </template>
+      </template>
+
+      <!-- Licences utilisateur -->
+      <template lwc:if={isLicensesTab}>
+        <article class="card">
+          <header class="card-header">
+            <h3 class="card-title">
+              User licenses
+              <lightning-helptext
+                content="Inactive = active internal users with no login for 90 days (or never). They hold a paid license they do not use. Free licenses (guest, Chatter, Identity, integration) are marked Included."
+              ></lightning-helptext>
+            </h3>
+            <c-org-intel-export-menu
+              compact
+              alternative-text="Export the user licenses"
+              data-sheet="licenses"
+              onexport={handleExportSheet}
+            ></c-org-intel-export-menu>
+          </header>
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="col-select">
+                  <span class="assistive">Select</span>
+                </th>
+                <th scope="col">License</th>
+                <th scope="col" class="num">Assigned / bought</th>
+                <th scope="col" class="bar-col">Utilization</th>
+                <th scope="col" class="num">Inactive</th>
+                <th scope="col">Verdict</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={userLicenses} for:item="license">
+                <tr key={license.name}>
+                  <td class="col-select">
+                    <template lwc:if={license.actionable}>
+                      <input
+                        type="checkbox"
+                        aria-label={license.checkboxLabel}
+                        data-key={license.selectKey}
+                        checked={license.checked}
+                        onchange={handleSelect}
+                      />
+                    </template>
+                  </td>
+                  <th scope="row">{license.name}</th>
+                  <td class="num">{license.usedText}</td>
+                  <td class="bar-col">
+                    <div class="bar-cell">
+                      <div class="bar-track" aria-hidden="true">
+                        <div
+                          class={license.meterClass}
+                          style={license.meterStyle}
+                        ></div>
+                      </div>
+                      <span class="bar-value">{license.utilizationText}</span>
+                    </div>
+                  </td>
+                  <td class="num">{license.inactiveText}</td>
+                  <td>
+                    <c-org-intel-badge
+                      label={license.verdict}
+                      tone={license.tone}
+                    ></c-org-intel-badge>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </article>
+
+        <template lwc:if={hasFeatureLicenses}>
+          <article class="card">
+            <header class="card-header">
+              <h3 class="card-title">
+                Feature licenses
+                <lightning-helptext
+                  content={activeUsersCaption}
+                ></lightning-helptext>
+              </h3>
+            </header>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Feature license</th>
+                  <th scope="col" class="num">Assigned</th>
+                  <th scope="col" class="num">Inactive</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template for:each={featureLicenses} for:item="row">
+                  <tr key={row.key}>
+                    <th scope="row">{row.name}</th>
+                    <td class="num">{row.assignedText}</td>
+                    <td class={row.inactiveClass}>{row.inactiveText}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </article>
+        </template>
+      </template>
+
+      <!-- Add-ons -->
+      <template lwc:if={isAddOnsTab}>
+        <article class="card">
+          <header class="card-header">
+            <h3 class="card-title">
+              Add-ons and packages
+              <lightning-helptext
+                content="Permission set licenses, managed packages and usage entitlements of the org. Some are included at no cost: check your contract before acting on Never assigned."
+              ></lightning-helptext>
+            </h3>
+            <div class="header-actions">
+              <lightning-combobox
+                label="Type"
+                variant="label-hidden"
+                options={addOnFilters}
+                value={addOnFilter}
+                onchange={handleAddOnFilter}
+              ></lightning-combobox>
+              <c-org-intel-export-menu
+                compact
+                alternative-text="Export the add-ons shown"
+                data-sheet="addOns"
+                onexport={handleExportSheet}
+              ></c-org-intel-export-menu>
+            </div>
+          </header>
+          <template lwc:if={hasAddOns}>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="col-select">
+                    <span class="assistive">Select</span>
+                  </th>
+                  <th scope="col">Name</th>
+                  <th scope="col" class="num">Used / allowed</th>
+                  <th scope="col" class="bar-col">Utilization</th>
+                  <th scope="col">Verdict</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template for:each={addOns} for:item="addOn">
+                  <tr key={addOn.key}>
+                    <td class="col-select">
+                      <template lwc:if={addOn.actionable}>
+                        <input
+                          type="checkbox"
+                          aria-label={addOn.checkboxLabel}
+                          data-key={addOn.selectKey}
+                          checked={addOn.checked}
+                          onchange={handleSelect}
+                        />
+                      </template>
+                    </td>
+                    <th scope="row">
+                      <span class="cell-title">{addOn.name}</span>
+                      <span class="muted small">{addOn.kind}</span>
+                    </th>
+                    <td class="num">{addOn.usedText}</td>
+                    <td class="bar-col">
+                      <template lwc:if={addOn.hasMeter}>
+                        <div class="bar-cell">
+                          <div class="bar-track" aria-hidden="true">
+                            <div
+                              class="bar-fill"
+                              style={addOn.meterStyle}
+                            ></div>
+                          </div>
+                          <span class="bar-value">{addOn.utilizationText}</span>
+                        </div>
+                      </template>
+                    </td>
+                    <td>
+                      <c-org-intel-badge
+                        label={addOn.verdict}
+                        tone={addOn.tone}
+                      ></c-org-intel-badge>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </template>
+          <template lwc:else>
+            <p class="empty">No add-on of this type.</p>
+          </template>
+        </article>
+      </template>
+
+      <!-- Contrat -->
+      <template lwc:if={isContractTab}>
+        <section class="kpis kpis-small" aria-label="Contract indicators">
+          <div class="kpi">
+            <span class="kpi-label">Contract per year</span>
+            <span class="kpi-value">{contractValueText}</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Paid but unused per year</span>
+            <span class="kpi-value kpi-alert">{contractWasteText}</span>
+            <span class="kpi-caption">{contractWasteCaption}</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Unused licenses</span>
+            <span class="kpi-value">{contractUnusedText}</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Next renewal</span>
+            <span class="kpi-value">{renewalText}</span>
+            <span class="kpi-caption">{renewalCaption}</span>
+          </div>
+        </section>
+
+        <article class="card">
+          <header class="card-header">
+            <h3 class="card-title">
+              Your Salesforce contract
+              <lightning-helptext content={contractHelp}></lightning-helptext>
+            </h3>
+            <div class="header-actions">
+              <lightning-button
+                variant="base"
+                label="Prefill from the org"
+                icon-name="utility:magicwand"
+                onclick={handlePrefill}
+              ></lightning-button>
+              <lightning-button
+                label="Add a line"
+                icon-name="utility:add"
+                onclick={handleAddLine}
+              ></lightning-button>
+              <c-org-intel-export-menu
+                compact
+                disabled={noContract}
+                alternative-text="Export the contract comparison"
+                data-sheet="contract"
+                onexport={handleExportSheet}
+              ></c-org-intel-export-menu>
+            </div>
+          </header>
+          <p lwc:if={showSessionNote} class="muted protection-note">
+            <lightning-icon
+              icon-name="utility:warning"
+              size="xx-small"
+              alternative-text="Warning"
+            ></lightning-icon>
+            {protectionMessage}
+            <lightning-button
+              variant="base"
+              label="Save to file"
+              onclick={handleExportData}
+            ></lightning-button>
+          </p>
+
+          <template lwc:if={isEditingLine}>
+            <div class="line-editor">
+              <h4 class="card-title">{lineEditorTitle}</h4>
+              <div class="editor-grid">
+                <lightning-input
+                  label="Product"
+                  required
+                  max-length="80"
+                  placeholder="e.g. Sales Cloud Enterprise"
+                  value={editingLine.product}
+                  data-field="product"
+                  onchange={handleLineField}
+                ></lightning-input>
+                <lightning-combobox
+                  label="Type"
+                  options={lineTypes}
+                  value={editingLine.lineType}
+                  data-field="lineType"
+                  onchange={handleLineField}
+                ></lightning-combobox>
+                <lightning-combobox
+                  label="Cloud"
+                  field-level-help="The cloud this product gives access to: the clouds of the contract define the scope of the adoption score."
+                  options={contractCloudOptions}
+                  value={editingLine.cloud}
+                  data-field="cloud"
+                  onchange={handleLineField}
+                ></lightning-combobox>
+                <lightning-combobox
+                  class="span-2"
+                  label="Linked license in the org"
+                  field-level-help="The license whose usage is compared with this line. Several lines can share a license (e.g. Sales Cloud and Service Cloud both use the Salesforce user license)."
+                  options={licenseOptions}
+                  value={editingLine.matchedKey}
+                  data-field="matchedKey"
+                  onchange={handleLineField}
+                ></lightning-combobox>
+                <lightning-input
+                  type="number"
+                  label="Quantity bought"
+                  min="0"
+                  step="1"
+                  value={editingLine.quantity}
+                  data-field="quantity"
+                  onchange={handleLineField}
+                ></lightning-input>
+                <lightning-input
+                  type="number"
+                  label="Net unit price"
+                  min="0"
+                  step="0.01"
+                  value={editingLine.unitPrice}
+                  data-field="unitPrice"
+                  onchange={handleLineField}
+                ></lightning-input>
+                <lightning-combobox
+                  label="Price period"
+                  options={pricePeriods}
+                  value={editingLine.pricePeriod}
+                  data-field="pricePeriod"
+                  onchange={handleLineField}
+                ></lightning-combobox>
+                <lightning-input
+                  type="date"
+                  label="Start date"
+                  value={editingLine.startDate}
+                  data-field="startDate"
+                  onchange={handleLineField}
+                ></lightning-input>
+                <lightning-input
+                  type="date"
+                  label="Renewal date"
+                  value={editingLine.endDate}
+                  data-field="endDate"
+                  onchange={handleLineField}
+                ></lightning-input>
+                <lightning-textarea
+                  class="span-3"
+                  label="Notes"
+                  value={editingLine.notes}
+                  data-field="notes"
+                  onchange={handleLineField}
+                ></lightning-textarea>
+              </div>
+              <div class="picker-actions">
+                <lightning-button
+                  label="Cancel"
+                  onclick={handleCancelLine}
+                ></lightning-button>
+                <lightning-button
+                  variant="brand"
+                  label="Save"
+                  onclick={handleSaveLine}
+                  disabled={isSavingLine}
+                ></lightning-button>
+              </div>
+            </div>
+          </template>
+
+          <template lwc:if={hasContract}>
+            <ul class="rows">
+              <template for:each={contractLines} for:item="line">
+                <li key={line.id} class="row-item">
+                  <div class="row row-contract">
+                    <span class="row-select">
+                      <template lwc:if={line.actionable}>
+                        <input
+                          type="checkbox"
+                          aria-label={line.checkboxLabel}
+                          data-key={line.selectKey}
+                          checked={line.checked}
+                          onchange={handleSelect}
+                        />
+                      </template>
+                    </span>
+                    <button
+                      class="row-main"
+                      aria-expanded={line.expanded}
+                      data-key={line.selectKey}
+                      onclick={handleToggle}
+                    >
+                      <lightning-icon
+                        icon-name={line.toggleIcon}
+                        size="xx-small"
+                        alternative-text={line.toggleLabel}
+                      ></lightning-icon>
+                      <span class="row-title">{line.product}</span>
+                      <span class="row-metric">{line.cloudText}</span>
+                    </button>
+                    <span class="usage" title="Actively used / bought">
+                      <template lwc:if={line.hasUsage}>
+                        <span class="usage-track" aria-hidden="true">
+                          <span
+                            class="usage-fill"
+                            style={line.usageStyle}
+                          ></span>
+                        </span>
+                      </template>
+                      <span class="usage-text">{line.usageText}</span>
+                    </span>
+                    <span
+                      class={line.unusedClass}
+                      title="Paid but unused per year"
+                      >{line.annualWasteText}</span
+                    >
+                    <c-org-intel-badge
+                      label={line.verdict}
+                      tone={line.tone}
+                    ></c-org-intel-badge>
+                  </div>
+                  <template lwc:if={line.expanded}>
+                    <div class="row-detail">
+                      <p>{line.detail}</p>
+                      <dl class="facts facts-grid">
+                        <dt>Linked license</dt>
+                        <dd>{line.linkedText}</dd>
+                        <dt>Bought / in Salesforce</dt>
+                        <dd>{line.quantityText} / {line.orgTotalText}</dd>
+                        <dt>Assigned / actively used</dt>
+                        <dd>{line.assignedText} / {line.activeText}</dd>
+                        <dt>Unused</dt>
+                        <dd>{line.unusedText}</dd>
+                        <dt>Unit price</dt>
+                        <dd>{line.priceText}</dd>
+                        <dt>Annual cost</dt>
+                        <dd>{line.annualCostText}</dd>
+                        <dt>Renewal</dt>
+                        <dd class={line.renewalClass}>{line.renewalText}</dd>
+                      </dl>
+                      <div class="detail-actions">
+                        <lightning-button
+                          variant="base"
+                          label="Edit"
+                          icon-name="utility:edit"
+                          data-id={line.id}
+                          onclick={handleEditLine}
+                        ></lightning-button>
+                        <lightning-button
+                          variant="base"
+                          label="Delete"
+                          icon-name="utility:delete"
+                          data-id={line.id}
+                          data-product={line.product}
+                          onclick={handleDeleteLine}
+                        ></lightning-button>
+                      </div>
+                    </div>
+                  </template>
+                </li>
+              </template>
+            </ul>
+          </template>
+          <template lwc:elseif={noEditor}>
+            <c-org-intel-empty-state
+              title="No contract yet"
+              message="Prefill one line per paid user license, then add your prices and renewal dates."
+              icon-name="utility:contract"
+            ></c-org-intel-empty-state>
+          </template>
+        </article>
+      </template>
+
+      <!-- Évolution -->
+      <template lwc:if={hasTrend}>
+        <article class="card">
+          <header class="card-header">
+            <h3 class="card-title">Over time</h3>
+          </header>
+          <c-org-intel-trend-chart
+            title="Adoption over time"
+            mode="line"
+            points={trendPoints}
+            series={trendSeries}
+            y-max="100"
+          ></c-org-intel-trend-chart>
+        </article>
+      </template>
+    </template>
+    <template lwc:else>
+      <c-org-intel-empty-state
+        title="Are you using all of Salesforce?"
+        message="Compare the licenses you pay for with real usage, and see which native features your teams never use. Takes a few seconds."
+        icon-name="utility:trending"
+      >
+        <lightning-button
+          variant="brand"
+          label="Run analysis"
+          onclick={handleRun}
+          disabled={isRunning}
+        ></lightning-button>
+      </c-org-intel-empty-state>
+    </template>
+  </div>
+</template>

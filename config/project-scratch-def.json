@@ -1,0 +1,13 @@
+{
+  "orgName": "Org Intelligence",
+  "edition": "Developer",
+  "features": ["EnableSetPasswordInApi"],
+  "settings": {
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    },
+    "chatterSettings": {
+      "enableChatter": true
+    }
+  }
+}

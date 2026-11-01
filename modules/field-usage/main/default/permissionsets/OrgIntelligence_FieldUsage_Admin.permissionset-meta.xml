@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Org Intelligence - module Field Usage (analyse d'utilisation des champs), profil administrateur.
+     Le module n'a aucun objet : le permission set donne la custom permission d'accès.
+     À assigner en plus du permission set Org Intelligence - Admin du socle. -->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>OrgIntelligence_FieldUsage</name>
+    </customPermissions>
+    <description
+  >Org Intelligence Field Usage module - admin access (field usage analysis, no custom object, results kept in the browser). Assign together with "Org Intelligence - Admin".</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Org Intelligence - Field Usage Admin</label>
+</PermissionSet>
