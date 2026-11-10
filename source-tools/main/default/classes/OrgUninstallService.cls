@@ -24,6 +24,13 @@ public with sharing class OrgUninstallService {
   public static final String MODE_SOURCE = 'source';
   public static final String MODE_PACKAGE = 'package';
   public static final String MODE_UNKNOWN = 'unknown';
+  // Dossiers de rapports / dashboards livrés par le produit (dont l'ancien dossier du socle) :
+  // jamais un autre dossier dont le nom commencerait par OrgIntelligence.
+  @TestVisible
+  private static final Set<String> ANALYTICS_FOLDERS = new Set<String>{
+    'OrgIntelligence',
+    'OrgIntelligenceRecommendations'
+  };
   @TestVisible
   private static final String MANIFEST_RESOURCE = 'OrgIntelligenceUninstall';
   private static final String API_VERSION = 'v66.0';
@@ -297,7 +304,7 @@ public with sharing class OrgUninstallService {
         OwnerId IN (
           SELECT Id
           FROM Folder
-          WHERE Type = 'Report' AND DeveloperName LIKE 'OrgIntelligence%'
+          WHERE Type = 'Report' AND DeveloperName IN :ANALYTICS_FOLDERS
         )
     ]) {
       if (deleteAnalytics('reports', report.Id)) {
@@ -311,7 +318,7 @@ public with sharing class OrgUninstallService {
         FolderId IN (
           SELECT Id
           FROM Folder
-          WHERE Type = 'Dashboard' AND DeveloperName LIKE 'OrgIntelligence%'
+          WHERE Type = 'Dashboard' AND DeveloperName IN :ANALYTICS_FOLDERS
         )
     ]) {
       if (deleteAnalytics('dashboards', dashboard.Id)) {

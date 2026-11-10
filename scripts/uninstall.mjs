@@ -201,7 +201,7 @@ const analyticsIds = sf([
   "--target-org",
   targetOrg,
   "--query",
-  "SELECT Id FROM Report WHERE OwnerId IN (SELECT Id FROM Folder WHERE Type = 'Report' AND DeveloperName LIKE 'OrgIntelligence%')"
+  "SELECT Id FROM Report WHERE OwnerId IN (SELECT Id FROM Folder WHERE Type = 'Report' AND DeveloperName IN ('OrgIntelligence', 'OrgIntelligenceRecommendations'))"
 ])
   .result.records.map((record) => ["reports", record.Id])
   .concat(
@@ -211,7 +211,7 @@ const analyticsIds = sf([
       "--target-org",
       targetOrg,
       "--query",
-      "SELECT Id FROM Dashboard WHERE FolderId IN (SELECT Id FROM Folder WHERE Type = 'Dashboard' AND DeveloperName LIKE 'OrgIntelligence%')"
+      "SELECT Id FROM Dashboard WHERE FolderId IN (SELECT Id FROM Folder WHERE Type = 'Dashboard' AND DeveloperName IN ('OrgIntelligence', 'OrgIntelligenceRecommendations'))"
     ]).result.records.map((record) => ["dashboards", record.Id])
   );
 const deletedIds = [];
