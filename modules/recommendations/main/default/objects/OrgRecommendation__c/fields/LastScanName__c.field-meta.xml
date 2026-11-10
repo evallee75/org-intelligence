@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>LastScanName__c</fullName>
-    <description>Nom du dernier scan (fait dans le navigateur) qui a détecté la recommandation.</description>
+    <description
+  >Nom du dernier scan (fait dans le navigateur) qui a détecté la recommandation.</description>
     <label>Last Detected Scan</label>
     <externalId>false</externalId>
     <length>80</length>

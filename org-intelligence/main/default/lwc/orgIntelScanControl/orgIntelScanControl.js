@@ -89,7 +89,8 @@ export async function replaceLatestScan(scan) {
 export async function loadScoreContext() {
   const context = { scoreConfig: null, ignoredFingerprints: undefined };
   try {
-    context.scoreConfig = JSON.parse(await getRuleCatalog()).scoreConfig || null;
+    context.scoreConfig =
+      JSON.parse(await getRuleCatalog()).scoreConfig || null;
   } catch {
     // préférences indisponibles : score enregistré par le scan
   }
@@ -319,7 +320,11 @@ export default class OrgIntelScanControl extends LightningElement {
     try {
       await discardResumableScan();
     } catch (error) {
-      this.toast("The scan could not be discarded", reduceErrors(error), "error");
+      this.toast(
+        "The scan could not be discarded",
+        reduceErrors(error),
+        "error"
+      );
     }
     this.resumable = null;
   }

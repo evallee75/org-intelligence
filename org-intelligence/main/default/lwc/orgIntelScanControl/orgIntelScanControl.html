@@ -47,11 +47,7 @@
         ></lightning-icon>
         <span class="sc-resume-text">{resumeText}</span>
         <template lwc:if={resumeActions}>
-          <button
-            class="sc-link"
-            onclick={handleResume}
-            disabled={isResuming}
-          >
+          <button class="sc-link" onclick={handleResume} disabled={isResuming}>
             Resume scan
           </button>
           <button class="sc-link" onclick={handleDiscard}>Discard</button>

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ScorePointsMedium__c</fullName>
-    <description>Points retirés au score de santé par constat de gravité Medium.</description>
+    <description
+  >Points retirés au score de santé par constat de gravité Medium.</description>
     <externalId>false</externalId>
     <label>Score points - Medium</label>
     <precision>5</precision>

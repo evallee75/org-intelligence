@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ScoreDomains__c</fullName>
-    <description>Domaines comptés dans le score, séparés par ; (vide = tous).</description>
+    <description
+  >Domaines comptés dans le score, séparés par ; (vide = tous).</description>
     <externalId>false</externalId>
     <label>Score domains</label>
     <length>255</length>

@@ -722,11 +722,7 @@ async function readValue(key, fallback, strict) {
   } catch {
     // Valeur abîmée : mise de côté pour analyse, la clé redevient libre
     try {
-      await writeSerialized(
-        db,
-        `${key}.corrupt`,
-        JSON.stringify(String(raw))
-      );
+      await writeSerialized(db, `${key}.corrupt`, JSON.stringify(String(raw)));
     } catch {
       // copie facultative
     }

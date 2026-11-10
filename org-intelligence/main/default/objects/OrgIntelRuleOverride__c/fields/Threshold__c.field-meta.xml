@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Threshold__c</fullName>
-    <description>Seuil propre à la règle ; vide = pas de seuil (valeur par défaut du code).</description>
+    <description
+  >Seuil propre à la règle ; vide = pas de seuil (valeur par défaut du code).</description>
     <externalId>false</externalId>
     <label>Threshold</label>
     <precision>10</precision>

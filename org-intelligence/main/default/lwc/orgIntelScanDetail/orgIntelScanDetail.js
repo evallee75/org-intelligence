@@ -363,12 +363,10 @@ export default class OrgIntelScanDetail extends LightningElement {
       addedKeys: new Set(diff.added.map((f) => f.fingerprint)),
       newFindingCount: diff.added.length,
       disappearedCount: removed.length,
-      disappeared: removed
-        .slice(0, 50)
-        .map((f, index) => ({
-          key: `${f.fingerprint}-${index}`,
-          label: `[${f.severity}] ${f.title}`
-        }))
+      disappeared: removed.slice(0, 50).map((f, index) => ({
+        key: `${f.fingerprint}-${index}`,
+        label: `[${f.severity}] ${f.title}`
+      }))
     };
   }
 
@@ -447,7 +445,11 @@ export default class OrgIntelScanDetail extends LightningElement {
 
   /** Échec de la mise à jour des recommandations à la fin du scan. */
   get recommendationsError() {
-    return this.scan?.recommendationsError || this.summary?.recommendationsError || "";
+    return (
+      this.scan?.recommendationsError ||
+      this.summary?.recommendationsError ||
+      ""
+    );
   }
 
   get componentValue() {

@@ -69,10 +69,7 @@ public inherited sharing class OrgDependencyCollector implements OrgScanStep {
       );
     }
     ctx.info(
-      rows.size() +
-        ' dependency links read for ' +
-        keys.size() +
-        ' components.'
+      rows.size() + ' dependency links read for ' + keys.size() + ' components.'
     );
     return null;
   }

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Severity__c</fullName>
-    <description>Gravité retenue (Critical, High, Medium, Low, Info) ; vide = gravité du catalogue.</description>
+    <description
+  >Gravité retenue (Critical, High, Medium, Low, Info) ; vide = gravité du catalogue.</description>
     <externalId>false</externalId>
     <label>Severity</label>
     <length>20</length>

@@ -119,7 +119,9 @@
               <div>{!HTMLENCODE(line)}</div>
             </apex:repeat>
             <apex:outputPanel rendered="{!running}">
-              <div>… {!HTMLENCODE(currentStepLabel)} (deploying, a few seconds)</div>
+              <div>
+                … {!HTMLENCODE(currentStepLabel)} (deploying, a few seconds)
+              </div>
             </apex:outputPanel>
           </div>
         </apex:outputPanel>
@@ -164,7 +166,9 @@
           </p>
           <p class="oi-muted">
             If the button fails, open your personal settings ›
-            <a href="{!URLFOR(allowAccessUrl)}" target="_top">External Credentials</a>
+            <a href="{!URLFOR(allowAccessUrl)}" target="_top"
+              >External Credentials</a
+            >
             › "Org Intelligence Tooling" › Allow Access (the "Org Intelligence -
             Tooling Access" permission set is required).
           </p>

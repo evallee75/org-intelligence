@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Accès au module Inventory d&apos;Org Intelligence (inventaire des métadonnées, sans objet personnalisé).</description>
+    <description
+  >Accès au module Inventory d&apos;Org Intelligence (inventaire des métadonnées, sans objet personnalisé).</description>
     <isLicensed>false</isLicensed>
     <label>Org Intelligence - Inventory</label>
 </CustomPermission>

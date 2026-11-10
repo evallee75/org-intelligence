@@ -433,7 +433,6 @@ export default class OrgIntelOverview extends LightningElement {
     return this.overview?.collaborative === true;
   }
 
-
   get openValue() {
     return formatNumber(this.overview?.openRecommendationCount ?? 0);
   }

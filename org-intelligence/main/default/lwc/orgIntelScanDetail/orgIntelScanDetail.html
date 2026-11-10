@@ -95,12 +95,19 @@
 
     <template lwc:else>
       <template lwc:if={summaryOnly}>
-        <div class="sd-banner sd-banner-info" role="status" data-id="summary-only">
+        <div
+          class="sd-banner sd-banner-info"
+          role="status"
+          data-id="summary-only"
+        >
           <lightning-icon
             icon-name="utility:info"
             size="xx-small"
           ></lightning-icon>
-          <span>The details of this scan are no longer kept: only its summary.</span>
+          <span
+            >The details of this scan are no longer kept: only its
+            summary.</span
+          >
           <lightning-helptext
             content="This browser keeps the details (findings, components, log) of the latest scan only. Older scans keep their score and counts. If you saved this scan to a file, open it with the Data menu."
           ></lightning-helptext>
@@ -121,7 +128,11 @@
       </template>
 
       <template lwc:if={isDegraded}>
-        <div class="sd-banner sd-banner-warning" role="status" data-id="degraded">
+        <div
+          class="sd-banner sd-banner-warning"
+          role="status"
+          data-id="degraded"
+        >
           <lightning-icon
             icon-name="utility:warning"
             size="xx-small"
@@ -134,7 +145,11 @@
       </template>
 
       <template lwc:if={inventoryBanner}>
-        <div class="sd-banner sd-banner-warning" role="status" data-id="inventory">
+        <div
+          class="sd-banner sd-banner-warning"
+          role="status"
+          data-id="inventory"
+        >
           <lightning-icon
             icon-name="utility:warning"
             size="xx-small"
@@ -147,13 +162,19 @@
       </template>
 
       <template lwc:if={recommendationsError}>
-        <div class="sd-banner sd-banner-warning" role="status" data-id="rec-error">
+        <div
+          class="sd-banner sd-banner-warning"
+          role="status"
+          data-id="rec-error"
+        >
           <lightning-icon
             icon-name="utility:warning"
             size="xx-small"
           ></lightning-icon>
           <span>Recommendations were not updated by this scan.</span>
-          <lightning-helptext content={recommendationsError}></lightning-helptext>
+          <lightning-helptext
+            content={recommendationsError}
+          ></lightning-helptext>
         </div>
       </template>
 
@@ -247,10 +268,7 @@
               </button>
               <template lwc:if={disappearedExpanded}>
                 <ul class="compare-list">
-                  <template
-                    for:each={comparison.disappeared}
-                    for:item="item"
-                  >
+                  <template for:each={comparison.disappeared} for:item="item">
                     <li key={item.key}>{item.label}</li>
                   </template>
                 </ul>

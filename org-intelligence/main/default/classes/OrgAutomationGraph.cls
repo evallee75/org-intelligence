@@ -49,7 +49,9 @@ public inherited sharing class OrgAutomationGraph {
   }
 
   /** Automatisations inventoriées par le scan (flows, Process Builder, triggers, règles de validation). */
-  public static List<Automation> load(List<OrgScanModels.Component> components) {
+  public static List<Automation> load(
+    List<OrgScanModels.Component> components
+  ) {
     List<Automation> result = new List<Automation>();
     for (OrgScanModels.Component component : components) {
       Map<String, Object> details = component.details == null

@@ -266,7 +266,9 @@ public inherited sharing class OrgAutomationRules {
    */
   public static void evaluateFlowGraph(OrgScanContext ctx) {
     List<OrgAutomationGraph.Automation> automations = OrgAutomationGraph.load(
-      ctx.inventoryOf(new Set<String>{ 'Flow', 'ApexTrigger', 'ValidationRule' })
+      ctx.inventoryOf(
+        new Set<String>{ 'Flow', 'ApexTrigger', 'ValidationRule' }
+      )
     );
 
     if (ctx.beginRule('FLOW_SAME_TIMING_NO_ORDER')) {
